@@ -1,61 +1,104 @@
 import pygame
+import sys
 import socket
-import threading
 import pickle
+import threading
 
-# Настройки
-WIDTH, HEIGHT = 500, 500
-BLUE = (0, 0, 255)
-RED = (255, 0, 0)
+# Устанавливаем размеры экрана
+WIDTH, HEIGHT = 300, 300
+GRID_SIZE = 3
+CELL_SIZE = WIDTH // GRID_SIZE
 
-# Инициализация Pygame
+# Инициализируем Pygame
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Онлайн игра с квадратами")
+pygame.display.set_caption("Крестики-нолики")
+font = pygame.font.SysFont(None, 60)
 
-# Игрок
-player_pos = [0, 0]
+# Функция отрисовки сетки
+def draw_grid():
+    for i in range(1, GRID_SIZE):
+        pygame.draw.line(screen, (0, 0, 0), (CELL_SIZE * i, 0), (CELL_SIZE * i, HEIGHT), 2)
+        pygame.draw.line(screen, (0, 0, 0), (0, CELL_SIZE * i), (WIDTH, CELL_SIZE * i), 2)
 
-# Сокет
-server_address = ('localhost', 12345)
-client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-client_socket.connect(server_address)
+# Основные переменные
+board = [['' for _ in range(GRID_SIZE)] for _ in range(GRID_SIZE)]
+turn = 'X'  # 'X' или 'O'
 
-def receive_data():
-    global player_pos
+# Функция для получения данных от клиента
+def receive_data(conn):
+    global board, turn
     while True:
-        data = client_socket.recv(1024)
-        if data:
-            player_pos = pickle.loads(data)
-
-# Запуск потока для получения данных
-threading.Thread(target=receive_data, daemon=True).start()
+        try:
+            data = conn.recv(1024)
+            if data:
+                board = pickle.loads(data)
+                turn = 'O' if turn == 'X' else 'X'
+        except Exception as e:
+            print("Ошибка получения данных:", e)
+            break
 
 # Основной игровой цикл
-running = True
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+def game_loop(conn):
+    global turn
+    threading.Thread(target=receive_data, args=(conn,), daemon=True).start()  # Запускаем поток для получения данных
+    while True:
+        screen.fill((255, 255, 255))
+        draw_grid()
 
-    keys = pygame.key.get_pressed()
-    if keys[pygame.K_UP]:
-        player_pos[1] -= 5
-    if keys[pygame.K_DOWN]:
-        player_pos[1] += 5
-    if keys[pygame.K_LEFT]:
-        player_pos[0] -= 5
-    if keys[pygame.K_RIGHT]:
-        player_pos[0] += 5
+        # Обработка событий
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
 
-    # Отправка позиции игрока на сервер
-    client_socket.send(pickle.dumps(player_pos))
+            if event.type == pygame.MOUSEBUTTONDOWN and turn:
+                x, y = event.pos
+                column = x // CELL_SIZE
+                row = y // CELL_SIZE
 
-    # Отрисовка
-    screen.fill((200, 200, 200))
-    pygame.draw.rect(screen, RED, (player_pos[0], player_pos[1], 50, 50))  # Красный квадрат
-    pygame.display.flip()
-    pygame.time.Clock().tick(60)
+                if board[row][column] == '':
+                    board[row][column] = turn
+                    turn = 'O' if turn == 'X' else 'X'
+                    conn.send(pickle.dumps(board))  # Отправить изменения по сети
 
-pygame.quit()
-client_socket.close()
+        # Отрисовка символов
+        for row in range(GRID_SIZE):
+            for col in range(GRID_SIZE):
+                if board[row][col] == 'X':
+                    text = font.render('X', True, (0, 0, 0))
+                    screen.blit(text, (col * CELL_SIZE + 50, row * CELL_SIZE + 10))
+                elif board[row][col] == 'O':
+                    text = font.render('O', True, (0, 0, 0))
+                    screen.blit(text, (col * CELL_SIZE + 50, row * CELL_SIZE + 10))
+
+        pygame.display.flip()
+
+# Запуск сервера или клиента в зависимости от запуска
+def start_game():
+    host = "127.0.0.1"  # Ваш публичный IP-адрес
+    port = 12345
+    conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    conn.settimeout(1000)  # Установка тайм-аута
+
+    choice = input("Запустить как (1) сервер или (2) клиент? ")
+
+    if choice == '1':
+        conn.bind((host, port))
+        conn.listen(1)
+        print("Ожидание подключения...")
+        conn, addr = conn.accept()
+        print("Подключено к:", addr)
+    elif choice == '2':
+        server_ip = host
+        try:
+            conn.connect((server_ip, port))
+            print("Подключено к серверу")
+        except ConnectionRefusedError:
+            print("Не удалось подключиться к серверу. Проверь, запущен ли сервер.")
+            return
+
+    game_loop(conn)
+
+if __name__ == "__main__":  # Исправлено с 'name' на '__name__' и 'main' на '__main__'
+    start_game()
