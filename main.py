@@ -1,22 +1,19 @@
 import pygame
 import math
 import os
+import sys
+from settings import *
+from inventory import *
 
-
-#конфиг
-FPS = 60
-BULLET_SPEED = 90
-running = True
-SIZE = SCREEN_WIDTH, SCREEN_HEIGHT = 600, 600
-BG_COLOR = (20), (120), (0)
 
 pygame.init() 
 clock = pygame.time.Clock()
-screen = pygame.display.set_mode(SIZE)
-pygame.display.set_caption("cursed_wood")
+screen = pygame.display.set_mode((HEIGHT, WIDTH))
+pygame.display.set_caption(TITLE)
 
 
-def load_image(name, colorkey=None): #тут загрузка картинок
+#тут загрузка картинок
+def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
     if not os.path.isfile(fullname):
         print(f"Файл с изображением '{fullname}' не найден")
@@ -29,6 +26,7 @@ def load_image(name, colorkey=None): #тут загрузка картинок
     else:
         image = image.convert_alpha()
     return image
+
 
 class Bullet(pygame.sprite.Sprite):
     image = load_image("bullet.png")
@@ -45,7 +43,7 @@ class Bullet(pygame.sprite.Sprite):
     def update(self):
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
-        if self.rect.right < 0 or self.rect.left > SCREEN_WIDTH or self.rect.top > SCREEN_HEIGHT or self.rect.bottom < 0:
+        if self.rect.right < 0 or self.rect.left > WIDTH or self.rect.top > HEIGHT or self.rect.bottom < 0:
             self.kill()
     
     def draw(self):
@@ -58,6 +56,7 @@ def custom_draw(group):
     for sprite in group:
         sprite.draw()
 
+
 class Player():
     """класс игрока"""
     def __init__(self, image, position):
@@ -66,17 +65,28 @@ class Player():
         self.rect = self.sprite.get_rect()
         self.mask = pygame.mask.from_surface(self.sprite)
         self.rect.center = position
-        self.speed_x = 1
-        self.speed_y = 1
+        self.speed_x = 2
+        self.speed_y = 2
         self.angle = 0
         self.hp = 100
         self.inventory = []
+        self.inventory_sprite = load_image("inventory.png")
+        self.inventory_sprite = pygame.transform.scale(self.inventory_sprite, (600, 600))
+        
+        self.hp_bar = load_image("hp_bar.png")
+        self.hp_bar = pygame.transform.scale(self.hp_bar, (250, 250))
 
     """отрисовка поворота"""
     def draw(self):
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, rotate_rect)
+        screen.blit(self.hp_bar, (0, 350))
+        if DISPLAY_iNVENTORY:
+            screen.blit(self.inventory_sprite, (0, 0))
+        pygame.draw.rect(screen, 'grey', (39, 388, 10, 1))
+        pygame.draw.rect(screen, 'grey', (53, 388, 10, 1))
+    
 
     """движения"""
     def move(self):
@@ -100,10 +110,10 @@ class Player():
     def border(self):
         if self.rect.top < 0:
             self.rect.top = 0
-        if self.rect.bottom > SCREEN_HEIGHT:
-            self.rect.bottom = SCREEN_HEIGHT
-        if self.rect.right > SCREEN_WIDTH:
-            self.rect.right = SCREEN_WIDTH
+        if self.rect.bottom > HEIGHT:
+            self.rect.bottom = HEIGHT
+        if self.rect.right > WIDTH:
+            self.rect.right = WIDTH
         if self.rect.left < 0:
             self.rect.left = 0
 
@@ -132,6 +142,7 @@ class Enemy():
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, rotate_rect)
 
+
 #экземпляры класса
 player = Player(image="player.png", position=(70, 70))
 zombey = Enemy(image="enemy.png", position=(250, 250))
@@ -141,17 +152,22 @@ bullet_group = pygame.sprite.Group()
 programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
 
-while running: #цикл
+#основной цикл
+while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+            sys.exit()
         if event.type == pygame.MOUSEBUTTONUP:
             bullet = Bullet(player.rect.center, player.angle)
             bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
             bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
             bullet_group.add(bullet)
+        if event.type == pygame.K_e:
+            DISPLAY_iNVENTORY = not DISPLAY_iNVENTORY
 
-    screen.fill(BG_COLOR)
+
+    screen.fill(BGCOLOR)
 
     zombey.draw()
     player.move()
