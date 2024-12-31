@@ -145,6 +145,7 @@ while running: #цикл
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+            sys.exit()
         if event.type == pygame.MOUSEBUTTONUP:
             bullet = Bullet(player.rect.center, player.angle)
             bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
