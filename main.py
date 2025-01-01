@@ -146,28 +146,31 @@ class Enemy():
 #экземпляры класса
 player = Player(image="player.png", position=(70, 70))
 zombey = Enemy(image="enemy.png", position=(250, 250))
+inventory_image = pygame.image.load('./data/inventory.png', )
+inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
 bullet_group = pygame.sprite.Group()
 
 #делаю иконку, она поч на верху не хочет работать
 programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
+inventory_open = False
 
-#основной цикл
-while running:
+while running:  # цикл
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-            sys.exit()
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_e:
+                inventory_open = not inventory_open
+
         if event.type == pygame.MOUSEBUTTONUP:
             bullet = Bullet(player.rect.center, player.angle)
             bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
             bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
             bullet_group.add(bullet)
-        if event.type == pygame.K_e:
-            DISPLAY_iNVENTORY = not DISPLAY_iNVENTORY
 
-
-    screen.fill(BGCOLOR)
+    screen.fill(BG_COLOR)
 
     zombey.draw()
     player.move()
@@ -175,12 +178,15 @@ while running:
 
     bullet_group.update()
     custom_draw(bullet_group)
-    
+
     player.draw()
-    
+
+    if inventory_open:
+        # Отображаем инвентарь
+        screen.blit(inventor_image, (center_x, center_y ))
+
     pygame.display.flip()
 
     clock.tick(FPS)
 
-#ИГРА САМА НЕ ЗАКРЫВАТЕСЯ ХЕЛП
 pygame.quit()
