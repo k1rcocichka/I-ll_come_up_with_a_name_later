@@ -80,7 +80,7 @@ class Player():
     def draw(self):
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        screen.blit(rotate_image, rotate_rect)
+        screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
         screen.blit(self.hp_bar, (0, 350))
         if DISPLAY_iNVENTORY:
             screen.blit(self.inventory_sprite, (0, 0))
@@ -108,14 +108,8 @@ class Player():
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
     def border(self):
-        if self.rect.top < 0:
-            self.rect.top = 0
-        if self.rect.bottom > HEIGHT:
-            self.rect.bottom = HEIGHT
-        if self.rect.right > WIDTH:
-            self.rect.right = WIDTH
-        if self.rect.left < 0:
-            self.rect.left = 0
+        self.rect.x = max(0, min(self.rect.x, map_rect.width - self.sprite.get_height()))
+        self.rect.y = max(0, min(self.rect.y, map_rect.height - self.sprite.get_width()))
 
     def update(self):
         pass
@@ -143,9 +137,18 @@ class Enemy():
         screen.blit(rotate_image, rotate_rect)
 
 
+class Camera():
+    def __init__(self, cam_x, cam_y):
+        self.cam_x = cam_x
+        self.cam_y = cam_y
+        
+
 #экземпляры класса
-player = Player(image="player.png", position=(70, 70))
-zombey = Enemy(image="enemy.png", position=(250, 250))
+player = Player(image="player.png", position=(300, 400))
+map = load_image("map.jpg")
+map = pygame.transform.scale(map, (1000, 1000))
+map_rect = map.get_rect()
+
 bullet_group = pygame.sprite.Group()
 
 #делаю иконку, она поч на верху не хочет работать
@@ -166,10 +169,13 @@ while running:
         if event.type == pygame.K_e:
             DISPLAY_iNVENTORY = not DISPLAY_iNVENTORY
 
+    camera_x = player.rect.x - WIDTH // 2 + 100 // 2
+    camera_y = player.rect.y - HEIGHT // 2 + 100 // 2
 
-    screen.fill(BGCOLOR)
+    screen.fill(WHITE)
+    
+    screen.blit(map, (-camera_x, -camera_y))
 
-    zombey.draw()
     player.move()
     player.angle_finder(pygame.mouse.get_pos())
 
