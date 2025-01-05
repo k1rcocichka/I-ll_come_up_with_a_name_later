@@ -14,6 +14,8 @@ GOLD = (255,215,0)
 TITLE = "Cursed wood"
 WIDTH = 600
 HEIGHT = 600
+inventory_width = 500
+inventory_height = 500
 FPS = 60
 BGCOLOR = DARKGREY
 
@@ -29,7 +31,10 @@ INVTILESIZE = 48
 COINOFFSET = 4
 GRIDWIDTH = WIDTH / TILESIZE
 GRIDHEIGHT = HEIGHT / TILESIZE
+center_x = (WIDTH - inventory_width) // 2
+center_y = (HEIGHT - inventory_height) // 2
 
-BULLET_SPEED = 60
+BULLET_SPEED = 30
 DISPLAY_iNVENTORY = False
 running = True
+inventory_open = False
