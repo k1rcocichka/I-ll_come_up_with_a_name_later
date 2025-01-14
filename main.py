@@ -49,7 +49,7 @@ class Bullet(pygame.sprite.Sprite):
     def draw(self):
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        screen.blit(rotate_image, rotate_rect)
+        screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
     
     
 def custom_draw(group):
@@ -87,7 +87,6 @@ class Player():
         pygame.draw.rect(screen, 'grey', (39, 388, 10, 1))
         pygame.draw.rect(screen, 'grey', (53, 388, 10, 1))
     
-
     """движения"""
     def move(self):
         key = pygame.key.get_pressed()
@@ -103,8 +102,8 @@ class Player():
 
     """штука для отслежки курсора"""
     def angle_finder(self, target_pos):
-        d_x = target_pos[0] - self.rect.centerx
-        d_y = target_pos[1] - self.rect.centery
+        d_x = target_pos[0] - self.rect.centerx + camera_x
+        d_y = target_pos[1] - self.rect.centery + camera_y
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
     def border(self):
@@ -120,27 +119,7 @@ class Npc():
 
 
 class Enemy():
-    """класс врагов"""
-    def __init__(self, image, position):
-        self.sprite = load_image(image)
-        self.sprite = pygame.transform.scale(self.sprite, (100, 100))
-        self.rect = self.sprite.get_rect()
-        self.rect.center = position
-        self.speed_x = 3
-        self.speed_y = 3
-        self.angle = 0
-        self.hp = 100
-
-    def draw(self):
-        rotate_image = pygame.transform.rotate(self.sprite, self.angle)
-        rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        screen.blit(rotate_image, rotate_rect)
-
-
-class Camera():
-    def __init__(self, cam_x, cam_y):
-        self.cam_x = cam_x
-        self.cam_y = cam_y
+    pass
         
 
 #экземпляры класса
@@ -151,7 +130,7 @@ map_rect = map.get_rect()
 
 bullet_group = pygame.sprite.Group()
 
-#делаю иконку, она поч на верху не хочет работать
+#иконка
 programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
 inventory_open = False
@@ -169,6 +148,7 @@ while running:  # цикл
             bullet = Bullet(player.rect.center, player.angle)
             bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
             bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
+            print(bullet.rect, player)
             bullet_group.add(bullet)
 
     camera_x = player.rect.x - WIDTH // 2 + 100 // 2
@@ -178,17 +158,13 @@ while running:  # цикл
     
     screen.blit(map, (-camera_x, -camera_y))
 
-    player.move()
     player.angle_finder(pygame.mouse.get_pos())
-
+    player.move()
+    
     bullet_group.update()
     custom_draw(bullet_group)
 
     player.draw()
-
-    if inventory_open:
-        # Отображаем инвентарь
-        screen.blit(inventor_image, (center_x, center_y ))
 
     pygame.display.flip()
 
