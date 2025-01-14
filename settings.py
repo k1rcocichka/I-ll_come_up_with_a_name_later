@@ -31,8 +31,6 @@ INVTILESIZE = 48
 COINOFFSET = 4
 GRIDWIDTH = WIDTH / TILESIZE
 GRIDHEIGHT = HEIGHT / TILESIZE
-center_x = (WIDTH - inventory_width) // 2
-center_y = (HEIGHT - inventory_height) // 2
 
 BULLET_SPEED = 30
 DISPLAY_iNVENTORY = False

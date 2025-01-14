@@ -5,7 +5,7 @@ import sys
 from settings import *
 from inventory import *
 
-
+#создание игры
 pygame.init() 
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((HEIGHT, WIDTH))
@@ -29,6 +29,7 @@ def load_image(name, colorkey=None):
 
 
 class Bullet(pygame.sprite.Sprite):
+    """конструктор пуль"""
     image = load_image("bullet.png")
     def __init__(self, position, angle, *group):
         super().__init__(*group)
@@ -41,17 +42,19 @@ class Bullet(pygame.sprite.Sprite):
         self.angle = angle
 
     def update(self):
+        """передвижение и смерть"""
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
-        if self.rect.right < 0 or self.rect.left > WIDTH or self.rect.top > HEIGHT or self.rect.bottom < 0:
+        if self.rect.right < 0 or self.rect.left > WIDTH + camera_x or self.rect.top > HEIGHT + camera_y or self.rect.bottom < 0:
             self.kill()
     
     def draw(self):
+        """рисууем пулю"""
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
     
-    
+#для рисование групп
 def custom_draw(group):
     for sprite in group:
         sprite.draw()
@@ -89,6 +92,8 @@ class Player():
     
     """движения"""
     def move(self):
+        original_position = self.rect.center
+
         key = pygame.key.get_pressed()
         if key[pygame.K_w]:
             self.rect.y -= self.speed_y
@@ -100,12 +105,17 @@ class Player():
             self.rect.x += self.speed_x
         self.border()
 
+        for box in boxs_group:
+            if self.rect.colliderect(box.rect):
+                self.rect.center = original_position
+
     """штука для отслежки курсора"""
     def angle_finder(self, target_pos):
         d_x = target_pos[0] - self.rect.centerx + camera_x
         d_y = target_pos[1] - self.rect.centery + camera_y
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
+    """ограничитель"""
     def border(self):
         self.rect.x = max(0, min(self.rect.x, map_rect.width - self.sprite.get_height()))
         self.rect.y = max(0, min(self.rect.y, map_rect.height - self.sprite.get_width()))
@@ -114,30 +124,83 @@ class Player():
         pass
         
 
-class Npc():
-    pass
+class Barrier(pygame.sprite.Sprite):
+    """констурктор препятствий"""
+    image = load_image("box.png")
+    image = pygame.transform.scale(image, (80, 80))
+    def __init__(self, position, *group):
+        super().__init__(*group)
+        self.sprite = Barrier.image
+        self.rect = self.sprite.get_rect()
+        self.rect.inflate_ip(-20, -20)
+        self.rect.center = position
+
+    def update(self):
+        pass
+
 
 
 class Enemy():
-    pass
+    """конструктор класса"""
+    def __init__(self, image, position):
+        self.sprite = load_image(image)
+        self.sprite = pygame.transform.scale(self.sprite, (100, 100))
+        self.rect = self.sprite.get_rect()
+        self.mask = pygame.mask.from_surface(self.sprite)
+        self.rect.center = position
+        self.speed_x = 1
+        self.speed_y = 1
+        self.angle = 0
+
+    def draw(self):
+        """рисуем врага"""
+        rotate_image = pygame.transform.rotate(self.sprite, self.angle)
+        rotate_rect = rotate_image.get_rect(center=self.rect.center)
+        screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
+
+    def move(self):
+        """логику позже"""
+        pass
+
+    def border(self):
+        """ограничитель"""
+        self.rect.x = max(0, min(self.rect.x, map_rect.width - self.sprite.get_height()))
+        self.rect.y = max(0, min(self.rect.y, map_rect.height - self.sprite.get_width()))
+
+    def angle_finder(self, target_pos):
+        """поиск врага"""
+        d_x = target_pos[0] - self.rect.centerx + camera_x
+        d_y = target_pos[1] - self.rect.centery + camera_y
+        self.angle =- math.degrees(math.atan2(d_y, d_x))
         
 
+#группы
+bullet_group = pygame.sprite.Group()
+boxs_group = pygame.sprite.Group()
+
 #экземпляры класса
+x, y = 200, 200
+for box in range(5):
+    x += 100
+    cords = x, y
+    box = Barrier(position=cords)
+    boxs_group.add(box)
+
 player = Player(image="player.png", position=(300, 400))
+enemy = Enemy(image="enemy.png", position=(500, 500))
 inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
-map = load_image("map.jpg")
+map = load_image("map.png")
 map = pygame.transform.scale(map, (1000, 1000))
 map_rect = map.get_rect()
-
-bullet_group = pygame.sprite.Group()
 
 #иконка
 programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
 inventory_open = False
 
-while running:  # цикл
+# цикл
+while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
@@ -162,11 +225,17 @@ while running:  # цикл
 
     player.angle_finder(pygame.mouse.get_pos())
     player.move()
+
+    enemy.angle_finder(player.rect)
+    enemy.move()
     
     bullet_group.update()
     custom_draw(bullet_group)
 
+    boxs_group.draw(map)
+
     player.draw()
+    enemy.draw()
 
     pygame.display.flip()
 
