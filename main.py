@@ -124,6 +124,8 @@ class Enemy():
 
 #экземпляры класса
 player = Player(image="player.png", position=(300, 400))
+inventory_image = pygame.image.load('./data/inventory.png', )
+inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
 map = load_image("map.jpg")
 map = pygame.transform.scale(map, (1000, 1000))
 map_rect = map.get_rect()
