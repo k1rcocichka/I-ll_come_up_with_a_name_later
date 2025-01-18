@@ -1,16 +1,65 @@
 import pygame
+import pygame as pg
 from settings import *
+from main import *
 import random
 import time
+
 
 class Inventory:
 	def __init__(self, player, totalSlots, cols, rows):
 		self.totalSlots = totalSlots
 		self.rows = rows
 		self.cols = cols
-		self.inventory_slots = []
-		self.armor_slots = []
-		self.weapon_slots = []
+		self.inventory_slots = [pygame.draw.rect(screen, 'yellow', (137, 345, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (179, 345, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (221, 345, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (262, 345, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (304, 345, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (345, 345, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (387, 345, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (429, 345, 36, 36)),
+				# инвентарь 2 ряд
+				pygame.draw.rect(screen, 'yellow', (137, 387, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (179, 387, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (221, 387, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (262, 387, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (304, 387, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (345, 387, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (387, 387, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (429, 387, 36, 36)),
+				# инвентарь 3 ряд
+				pygame.draw.rect(screen, 'yellow', (137, 429, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (179, 429, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (221, 429, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (262, 429, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (304, 429, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (345, 429, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (387, 429, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (429, 429, 36, 36)),
+				# инвентарь 4 ряд
+				pygame.draw.rect(screen, 'yellow', (137, 471, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (179, 471, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (221, 471, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (262, 471, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (304, 471, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (345, 471, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (387, 471, 36, 36)),
+				pygame.draw.rect(screen, 'yellow', (429, 471, 36, 36))
+				]
+		self.armor_slots = [pygame.draw.rect(screen, 'yellow', (387, 261, 36, 36)),
+        					pygame.draw.rect(screen, 'yellow', (429, 261, 36, 36)),
+							pygame.draw.rect(screen, 'yellow', (387, 137, 78, 119))]
+
+		self.weapon_slots = [pygame.draw.rect(screen, 'yellow', (137, 137, 36, 36)),
+							pygame.draw.rect(screen, 'yellow', (179, 137, 36, 36)),
+							pygame.draw.rect(screen, 'yellow', (221, 137, 36, 36)),
+							pygame.draw.rect(screen, 'yellow', (137, 179, 36, 36)),
+							pygame.draw.rect(screen, 'yellow', (179, 179, 36, 36)),
+							pygame.draw.rect(screen, 'yellow', (221, 179, 36, 36)),
+							pygame.draw.rect(screen, 'yellow', (137, 220, 36, 36)),
+							pygame.draw.rect(screen, 'yellow', (179, 220, 36, 36)),
+							pygame.draw.rect(screen, 'yellow', (179, 261, 36, 36))]
 		self.display_inventory = False
 		self.player = player
 		self.appendSlots()
@@ -18,19 +67,6 @@ class Inventory:
 
 		self.movingitem = None
 		self.movingitemslot = None
-		
-	def appendSlots(self):
-		while len(self.inventory_slots) != self.totalSlots:
-			for x in range(WIDTH//2 - ((INVTILESIZE+2) * self.cols)//2, WIDTH//2 + ((INVTILESIZE+2) * self.cols) //2, INVTILESIZE+2):
-				for y in range(UIHEIGTH, UIHEIGTH+INVTILESIZE * self.rows, INVTILESIZE+2):
-					self.inventory_slots.append(InventorySlot(x, y))
-
-		while len(self.armor_slots) != 4:
-			for y in range(UIHEIGTH-100, UIHEIGTH-100+(INVTILESIZE+1) * 4, INVTILESIZE+2):
-				self.armor_slots.append(EquipableSlot(self.inventory_slots[0].x - 100, y))
-
-		while len(self.weapon_slots) != 1:
-			self.weapon_slots.append(EquipableSlot(self.armor_slots[3].x - 50, self.armor_slots[3].y))
 
 	def setSlotTypes(self):
 		self.armor_slots[0].slottype = 'head'
