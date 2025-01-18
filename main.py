@@ -139,7 +139,6 @@ class Barrier(pygame.sprite.Sprite):
         pass
 
 
-
 class Enemy():
     """конструктор класса"""
     def __init__(self, image, position):
@@ -152,15 +151,19 @@ class Enemy():
         self.speed_y = 1
         self.angle = 0
 
-    def draw(self):
+    def update(self, target_pos, target):
         """рисуем врага"""
+        self.angle_finder(target_pos)
+        self.target(target)
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
 
-    def move(self):
+    def move(self, target):
         """логику позже"""
-        pass
+        self.rect.x += self.speed_x
+        self.rect.y += self.speed_y
+        print(self.rect.x, player.rect.y)
 
     def border(self):
         """ограничитель"""
@@ -172,7 +175,13 @@ class Enemy():
         d_x = target_pos[0] - self.rect.centerx + camera_x
         d_y = target_pos[1] - self.rect.centery + camera_y
         self.angle =- math.degrees(math.atan2(d_y, d_x))
-        
+
+    def target(self, target):
+        if (target.rect.x > self.rect.x - 200 and target.rect.y > self.rect.y - 200) and (target.rect.x < self.rect.x + 200 and target.rect.y < self.rect.y + 200):
+            self.speed_x = int(2 * math.cos(math.radians(self.angle)))
+            self.speed_y = -int(2 * math.sin(math.radians(self.angle)))
+            print(self.speed_x, self.speed_y)
+            self.move(target)
 
 #группы
 bullet_group = pygame.sprite.Group()
@@ -213,7 +222,6 @@ while running:
             bullet = Bullet(player.rect.center, player.angle)
             bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
             bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
-            print(bullet.rect, player)
             bullet_group.add(bullet)
 
     camera_x = player.rect.x - WIDTH // 2 + 100 // 2
@@ -226,8 +234,7 @@ while running:
     player.angle_finder(pygame.mouse.get_pos())
     player.move()
 
-    enemy.angle_finder(player.rect)
-    enemy.move()
+    enemy.update(pygame.mouse.get_pos(), player)
     
     bullet_group.update()
     custom_draw(bullet_group)
@@ -235,7 +242,6 @@ while running:
     boxs_group.draw(map)
 
     player.draw()
-    enemy.draw()
 
     pygame.display.flip()
 
