@@ -3,6 +3,8 @@ import math
 import os
 import sys
 from settings import *
+from inventory import *
+#dbsfkhajgfhkjgjfhlkhjgjf
 
 #создание игры
 pygame.init() 
