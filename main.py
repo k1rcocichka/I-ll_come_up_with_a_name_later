@@ -4,7 +4,7 @@ import os
 import sys
 from settings import *
 from inventory import *
-
+#dbsfkhajgfhkjgjfhlkhjgjf
 #создание игры
 pygame.init() 
 clock = pygame.time.Clock()
