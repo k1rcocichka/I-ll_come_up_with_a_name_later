@@ -3,7 +3,6 @@ import math
 import os
 import sys
 from settings import *
-from inventory import *
 
 #создание игры
 pygame.init() 
@@ -66,6 +65,7 @@ class Player():
         self.sprite = load_image(image)
         self.sprite = pygame.transform.scale(self.sprite, (100, 100))
         self.rect = self.sprite.get_rect()
+        self.rect.inflate_ip(-50, -50)
         self.mask = pygame.mask.from_surface(self.sprite)
         self.rect.center = position
         self.speed_x = 2
@@ -87,8 +87,8 @@ class Player():
         screen.blit(self.hp_bar, (0, 350))
         if DISPLAY_iNVENTORY:
             screen.blit(self.inventory_sprite, (0, 0))
-        pygame.draw.rect(screen, 'grey', (39, 388, 10, 1))
-        pygame.draw.rect(screen, 'grey', (53, 388, 10, 1))
+        lost_hp = pygame.draw.rect(screen, 'grey', (39, 388, 10, 190 - self.hp))
+        lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190))
     
     """движения"""
     def move(self):
@@ -108,6 +108,11 @@ class Player():
         for box in boxs_group:
             if self.rect.colliderect(box.rect):
                 self.rect.center = original_position
+        
+        if self.rect.colliderect(enemy):
+            self.rect.center = original_position
+            self.hp -= self.hp - 1
+            print(self.hp)
 
     """штука для отслежки курсора"""
     def angle_finder(self, target_pos):
@@ -145,6 +150,7 @@ class Enemy():
         self.sprite = load_image(image)
         self.sprite = pygame.transform.scale(self.sprite, (100, 100))
         self.rect = self.sprite.get_rect()
+        self.rect.inflate_ip(-20, -20)
         self.mask = pygame.mask.from_surface(self.sprite)
         self.rect.center = position
         self.speed_x = 1
@@ -153,17 +159,23 @@ class Enemy():
 
     def update(self, target_pos, target):
         """рисуем врага"""
-        self.angle_finder(target_pos)
-        self.target(target)
+        self.target(target, target_pos)
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
 
     def move(self, target):
         """логику позже"""
+        original_position = self.rect.center
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
-        print(self.rect.x, player.rect.y)
+
+        for box in boxs_group:
+            if self.rect.colliderect(box.rect):
+                self.rect.center = original_position
+
+        if self.rect.colliderect(player):
+            self.rect.center = original_position
 
     def border(self):
         """ограничитель"""
@@ -176,11 +188,12 @@ class Enemy():
         d_y = target_pos[1] - self.rect.centery + camera_y
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
-    def target(self, target):
+    def target(self, target, target_pos):
+        print(self.rect.y)
         if (target.rect.x > self.rect.x - 200 and target.rect.y > self.rect.y - 200) and (target.rect.x < self.rect.x + 200 and target.rect.y < self.rect.y + 200):
             self.speed_x = int(2 * math.cos(math.radians(self.angle)))
             self.speed_y = -int(2 * math.sin(math.radians(self.angle)))
-            print(self.speed_x, self.speed_y)
+            self.angle_finder(target_pos)
             self.move(target)
 
 #группы
@@ -206,24 +219,12 @@ map_rect = map.get_rect()
 #иконка
 programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
-inwentory = Inventory(Player, 10, 5, 2)
 inventory_open = False
 
 while running:  # цикл
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
-        if event.type == pg.MOUSEBUTTONDOWN and event.button == 3:
-            if inwentory.display_inventory:
-                mouse_pos = pg.mouse.get_pos()
-                inwentory.checkSlot(screen, mouse_pos)
-        if event.type == pg.MOUSEBUTTONDOWN and event.button == 1:
-            if inwentory.display_inventory:
-                inwentory.moveItem(screen)
-        if event.type == pg.MOUSEBUTTONUP and event.button == 1:
-            if inwentory.display_inventory:
-                inwentory.placeItem(screen)
 
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_e:
@@ -245,10 +246,12 @@ while running:  # цикл
     player.move()
     player.angle_finder(pygame.mouse.get_pos())
 
-    enemy.update(pygame.mouse.get_pos(), player)
+    enemy.update(player, pygame.mouse.get_pos())
     
     bullet_group.update()
     custom_draw(bullet_group)
+
+    boxs_group.draw(map)
 
     player.draw()
 
@@ -306,10 +309,8 @@ while running:  # цикл
         pygame.draw.rect(screen, 'yellow', (387, 471, 36, 36))
         pygame.draw.rect(screen, 'yellow', (429, 471, 36, 36))
 
-
     pygame.display.flip()
 
     clock.tick(FPS)
 
-# ИГРА САМА НЕ ЗАКРЫВАТЕСЯ ХЕЛП
 pygame.quit()

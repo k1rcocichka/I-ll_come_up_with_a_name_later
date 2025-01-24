@@ -15,8 +15,8 @@ GOLD = (255,215,0)
 
 #конфиг
 TITLE = "Cursed wood"
-WIDTH = 650
-HEIGHT = 650
+WIDTH = 600
+HEIGHT = 600
 inventory_width = 500
 inventory_height = 500
 FPS = 60
@@ -39,3 +39,6 @@ BULLET_SPEED = 30
 DISPLAY_iNVENTORY = False
 running = True
 inventory_open = False
+
+center_x = (WIDTH - inventory_width) // 2
+center_y = (HEIGHT - inventory_height) // 2
