@@ -1,3 +1,6 @@
+import pygame
+
+
 #разные цвета
 WHITE = (255, 255, 255)
 BLACK =(0, 0, 0)
@@ -34,56 +37,33 @@ GRIDHEIGHT = HEIGHT / TILESIZE
 
 BULLET_SPEED = 30
 DISPLAY_iNVENTORY = False
-running = True
 inventory_open = False
+center_x = (WIDTH - inventory_width) // 2
+center_y = (HEIGHT - inventory_height) // 2
 
-          #броня с лево сверху
-pygame.draw.rect(screen, 'yellow', (137, 137, 36, 36))
-pygame.draw.rect(screen, 'yellow', (179, 137, 36, 36))
-pygame.draw.rect(screen, 'yellow', (221, 137, 36, 36))
-pygame.draw.rect(screen, 'yellow', (137, 179, 36, 36))
-pygame.draw.rect(screen, 'yellow', (179, 179, 36, 36))
-pygame.draw.rect(screen, 'yellow', (221, 179, 36, 36))
-pygame.draw.rect(screen, 'yellow', (137, 220, 36, 36))
-pygame.draw.rect(screen, 'yellow', (179, 220, 36, 36))
-pygame.draw.rect(screen, 'yellow', (179, 261, 36, 36))
-         #картинка игрока с права сверху
-pygame.draw.rect(screen, 'yellow', (387, 137, 78, 119))
-pygame.draw.rect(screen, 'yellow', (387, 261, 36, 36))
-pygame.draw.rect(screen, 'yellow', (429, 261, 36, 36))
-         #инвентарь 1 ряд
-pygame.draw.rect(screen, 'yellow', (137, 345, 36, 36))
-pygame.draw.rect(screen, 'yellow', (179, 345, 36, 36))
-pygame.draw.rect(screen, 'yellow', (221, 345, 36, 36))
-pygame.draw.rect(screen, 'yellow', (262, 345, 36, 36))
-pygame.draw.rect(screen, 'yellow', (304, 345, 36, 36))
-pygame.draw.rect(screen, 'yellow', (345, 345, 36, 36))
-pygame.draw.rect(screen, 'yellow', (387, 345, 36, 36))
-pygame.draw.rect(screen, 'yellow', (429, 345, 36, 36))
-        # инвентарь 2 ряд
-pygame.draw.rect(screen, 'yellow', (137, 387, 36, 36))
-pygame.draw.rect(screen, 'yellow', (179, 387, 36, 36))
-pygame.draw.rect(screen, 'yellow', (221, 387, 36, 36))
-pygame.draw.rect(screen, 'yellow', (262, 387, 36, 36))
-pygame.draw.rect(screen, 'yellow', (304, 387, 36, 36))
-pygame.draw.rect(screen, 'yellow', (345, 387, 36, 36))
-pygame.draw.rect(screen, 'yellow', (387, 387, 36, 36))
-pygame.draw.rect(screen, 'yellow', (429, 387, 36, 36))
-        # инвентарь 3 ряд
-pygame.draw.rect(screen, 'yellow', (137, 429, 36, 36))
-pygame.draw.rect(screen, 'yellow', (179, 429, 36, 36))
-pygame.draw.rect(screen, 'yellow', (221, 429, 36, 36))
-pygame.draw.rect(screen, 'yellow', (262, 429, 36, 36))
-pygame.draw.rect(screen, 'yellow', (304, 429, 36, 36))
-pygame.draw.rect(screen, 'yellow', (345, 429, 36, 36))
-pygame.draw.rect(screen, 'yellow', (387, 429, 36, 36))
-pygame.draw.rect(screen, 'yellow', (429, 429, 36, 36))
-      # инвентарь 4 ряд
-pygame.draw.rect(screen, 'yellow', (137, 471, 36, 36))
-pygame.draw.rect(screen, 'yellow', (179, 471, 36, 36))
-pygame.draw.rect(screen, 'yellow', (221, 471, 36, 36))
-pygame.draw.rect(screen, 'yellow', (262, 471, 36, 36))
-pygame.draw.rect(screen, 'yellow', (304, 471, 36, 36))
-pygame.draw.rect(screen, 'yellow', (345, 471, 36, 36))
-pygame.draw.rect(screen, 'yellow', (387, 471, 36, 36))
-pygame.draw.rect(screen, 'yellow', (429, 471, 36, 36))
+# Константы
+CELL_SIZE = 36
+GRID_ORIGIN = (50, 50)
+
+
+# Создание ячеек инвентаря
+inventory_positions = [
+    (137, 345), (179, 345), (221, 345), (262, 345), (304, 345), (345, 345), (387, 345), (429, 345),
+    (137, 387), (179, 387), (221, 387), (262, 387), (304, 387), (345, 387), (387, 387), (429, 387),
+    (137, 429), (179, 429), (221, 429), (262, 429), (304, 429), (345, 429), (387, 429), (429, 429),
+    (137, 471), (179, 471), (221, 471), (262, 471), (304, 471), (345, 471), (387, 471), (429, 471),
+]
+
+armor_positions = [
+    (387, 261), (429, 261),
+    (387, 137),  # большая ячейка для брони
+]
+
+weapon_positions = [
+    (137, 137), (179, 137), (221, 137),
+    (137, 179), (179, 179), (221, 179),
+    (137, 220), (179, 220), (179, 261),
+]
+
+dragging_item = None
+original_cell = None
