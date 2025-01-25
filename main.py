@@ -349,7 +349,7 @@ while running:
         if event.type == pygame.MOUSEBUTTONUP:
             if player.have_wearon():
                 if player.inventory[player.inventory_cell].full_clip > 0:
-                    player.inventory[player.inventory_cell].full_clip -= 12
+                    player.inventory[player.inventory_cell].full_clip -= 1
                     bullet = Bullet(player.rect.center, player.angle)
                     bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
                     bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
