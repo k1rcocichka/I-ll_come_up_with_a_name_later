@@ -11,7 +11,7 @@ clock = pygame.time.Clock()
 screen = pygame.display.set_mode((HEIGHT, WIDTH))
 pygame.display.set_caption(TITLE)
 
-#commit
+#commit шедевр
 
 
 #тут загрузка картинок
