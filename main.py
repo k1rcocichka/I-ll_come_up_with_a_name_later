@@ -395,7 +395,7 @@ while running:
                 player.inventory[player.inventory_cell].use_medkit -= 1
                 player.hp += 50
 
-            if type(player.inventory[player.inventory_cell]) == ClipsWearon:
+            if type(player.inventory[player.inventory_cell]) == ClipsWearon and player.inventory[player.inventory_cell].use_clips > 0:
                 for obj in player.inventory:
                     if type(obj) == Wearon:
                         obj.full_clip += player.inventory[player.inventory_cell].clips_many
