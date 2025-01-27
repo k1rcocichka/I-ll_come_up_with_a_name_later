@@ -27,24 +27,28 @@ def load_image(name, colorkey=None):
         image = image.convert_alpha()
     return image
 
+#для рисование групп
+def custom_draw(group):
+    for sprite in group:
+        sprite.draw()
 
-class Wearon(pygame.sprite.Sprite):
-    image = load_image("мка.png")
-    image = pygame.transform.scale(image, (50, 50))
+#класс объктов
+class Object(pygame.sprite.Sprite):
     image_e = load_image("e.png")
     image_e = pygame.transform.scale(image_e, (40, 40))
-    def __init__(self, position, full_clip, clip, *groups):
+    def __init__(self, position, image, name, *groups):
         super().__init__(*groups)
-        self.sprite = Wearon.image
+        image = load_image(image)
+        image = pygame.transform.scale(image, (50, 50))
+        self.sprite = image
         self.rect = self.sprite.get_rect()
         self.rect.center = position
-        self.sprite_e = Wearon.image_e
+        self.sprite_e = Object.image_e
         self.rect_e = self.sprite_e.get_rect()
         self.rect_e.center = position
 
         self.use_me = False
-        self.full_clip = full_clip
-        self.clip = clip
+        self.name = name
 
     def draw(self):
         screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
@@ -58,6 +62,27 @@ class Wearon(pygame.sprite.Sprite):
 
     def update(self):
         self.use()
+
+
+class Wearon(Object):
+    def __init__(self, position, image, name, full_clip, clip, *groups):
+        super().__init__(position, image, name, *groups)
+        self.full_clip = full_clip
+        self.clip = clip
+
+
+class Medkit(Object):
+    def __init__(self, position, image, use_medkit, name, *groups):
+        super().__init__(position, image, name,*groups)
+        self.use_medkit = use_medkit
+
+
+class ClipsWearon(Object):
+    def __init__(self, position, image, clips_many, use_clips, name, *groups):
+        super().__init__(position, image, name, *groups)
+        self.clips_many = clips_many
+        self.use_clips = use_clips
+
 
 class Bullet(pygame.sprite.Sprite):
     """конструктор пуль"""
@@ -91,13 +116,8 @@ class Bullet(pygame.sprite.Sprite):
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
-    
-#для рисование групп
-def custom_draw(group):
-    for sprite in group:
-        sprite.draw()
 
-
+#анимация
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y):
         super().__init__(all_sprites)
@@ -136,7 +156,7 @@ class Player():
         self.speed_y = 2
         self.angle = 0
         self.hp = 190
-        self.inventory = []
+        self.inventory = [None, None, None]
 
         self.inventory_sprite = load_image("inventory.png")
         self.inventory_sprite = pygame.transform.scale(self.inventory_sprite, (600, 600))
@@ -151,9 +171,19 @@ class Player():
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
         screen.blit(self.hp_bar, (0, 350))
-
-        if self.inventory:
+        
+        if self.have_wearon():
             text = f"{self.inventory[self.inventory_cell].clip}/{self.inventory[self.inventory_cell].full_clip}"
+            text = font.render(text, True, (0, 0, 0))
+            screen.blit(text, (450, 520))
+
+        if type(self.inventory[self.inventory_cell]) == Medkit:
+            text = f"{self.inventory[self.inventory_cell].use_medkit}"
+            text = font.render(text, True, (0, 0, 0))
+            screen.blit(text, (450, 520))
+
+        if type(self.inventory[self.inventory_cell]) == ClipsWearon:
+            text = f"{self.inventory[self.inventory_cell].use_clips}"
             text = font.render(text, True, (0, 0, 0))
             screen.blit(text, (450, 520))
 
@@ -202,7 +232,7 @@ class Player():
         pass
 
     def have_wearon(self):
-        if self.inventory:
+        if type(self.inventory[self.inventory_cell]) == Wearon:
             return True
         return False
         
@@ -211,13 +241,12 @@ class Barrier(pygame.sprite.Sprite):
     """констурктор препятствий"""
     image = load_image("box.png")
     image = pygame.transform.scale(image, (80, 80))
-    def __init__(self, position, loot, *group):
+    def __init__(self, position, *group):
         super().__init__(*group)
         self.sprite = Barrier.image
         self.rect = self.sprite.get_rect()
         self.rect.inflate_ip(-20, -20)
         self.rect.center = position
-        self.loot = loot
         self.hp = 20
 
     def update(self):   
@@ -238,9 +267,10 @@ class Enemy(pygame.sprite.Sprite):
         self.rect = self.sprite.get_rect()
         self.rect.inflate_ip(-50, -50)
         self.mask = pygame.mask.from_surface(self.sprite)
+
         self.rect.center = position
-        self.speed_x = 1
-        self.speed_y = 1
+        self.speed_x_ = 3
+        self.speed_y_ = 3
         self.angle = 0
         self.hp = 100
 
@@ -282,10 +312,10 @@ class Enemy(pygame.sprite.Sprite):
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
     def target(self, target_pos):
-        if (player.rect.x > self.rect.x - 150 and player.rect.y > self.rect.y - 150) and (player.rect.x < self.rect.x + 150 and player.rect.y < self.rect.y + 150):
+        if (player.rect.x > self.rect.x - 200 and player.rect.y > self.rect.y - 200) and (player.rect.x < self.rect.x + 200 and player.rect.y < self.rect.y + 200):
             self.angle_finder(target_pos)
-            self.speed_x = int(2 * math.cos(math.radians(self.angle)))
-            self.speed_y = -int(2 * math.sin(math.radians(self.angle)))
+            self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
+            self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
         else:
             self.speed_x = 0
             self.speed_y = 0
@@ -295,27 +325,32 @@ class Enemy(pygame.sprite.Sprite):
 bullet_group = pygame.sprite.Group()
 boxs_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
-wearon_group = pygame.sprite.Group()
+objects_group = pygame.sprite.Group()
 
 #экземпляры класса
+player = Player(image="player.png", position=(300, 400))
+enemy = Enemy(position=(500, 500))
+mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяушка", full_clip=30, clip=30)
+gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15)
+medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
+clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
 x, y = 200, 200
-medkit = None
 for box in range(5):
     x += 100
     cords = x, y
-    box = Barrier(position=cords, loot=[medkit])
+    box = Barrier(position=cords)
     boxs_group.add(box)
 
-
-player = Player(image="player.png", position=(300, 400))
-enemy = Enemy(position=(500, 500))
-mka = Wearon(position=(320, 420), full_clip=30, clip=30)
-wearon_group.add(mka)
+objects_group.add(medkit)
+objects_group.add(mka)
+objects_group.add(gun)
+objects_group.add(clips)
 enemy_group.add(enemy)
 
 inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
 
+#карта
 map = load_image("map.png")
 map = pygame.transform.scale(map, (1000, 1000))
 map_rect = map.get_rect()
@@ -325,6 +360,7 @@ programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
 inventory_open = False
 
+#запуск игры
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
@@ -347,7 +383,7 @@ while running:
                 player.inventory_cell = 2
         
         if event.type == pygame.MOUSEBUTTONUP:
-            if player.have_wearon():
+            if player.have_wearon() and type(player.inventory[player.inventory_cell]) == Wearon: #проверка оружия
                 if player.inventory[player.inventory_cell].full_clip > 0:
                     player.inventory[player.inventory_cell].full_clip -= 1
                     bullet = Bullet(player.rect.center, player.angle)
@@ -355,11 +391,25 @@ while running:
                     bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
                     bullet_group.add(bullet)
 
-        if event.type == pygame.KEYDOWN:
+            if type(player.inventory[player.inventory_cell]) == Medkit and player.inventory[player.inventory_cell].use_medkit > 0: #проверка на аптечку
+                player.inventory[player.inventory_cell].use_medkit -= 1
+                player.hp += 50
+
+            if type(player.inventory[player.inventory_cell]) == ClipsWearon and player.inventory[player.inventory_cell].use_clips > 0:
+                for obj in player.inventory:
+                    if type(obj) == Wearon:
+                        obj.full_clip += player.inventory[player.inventory_cell].clips_many
+                player.inventory[player.inventory_cell].use_clips -= 1
+
+        if event.type == pygame.KEYDOWN: #как мне гидры поюзать
             if event.key == pygame.K_e:
-                if mka.use_me:
-                    player.inventory.append(mka)
-                    mka.kill()
+                for obj in objects_group:
+                    if obj.use_me:
+                        obj.kill()
+                        for j in player.inventory:
+                           if j == None:
+                               player.inventory[player.inventory.index(None)] = obj
+                               break
 
     camera_x = player.rect.x - WIDTH // 2 + 100 // 2
     camera_y = player.rect.y - HEIGHT // 2 + 100 // 2
@@ -367,11 +417,12 @@ while running:
     screen.fill(WHITE)
 
     screen.blit(map, (-camera_x, -camera_y))
-
+    
+    #заргузка ассетов
     player.move()
     player.angle_finder(pygame.mouse.get_pos())
 
-    enemy_group.update(player, pygame.mouse.get_pos())
+    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
     
     custom_draw(bullet_group)
     bullet_group.update()
@@ -379,8 +430,8 @@ while running:
     custom_draw(boxs_group)
     boxs_group.update()
 
-    custom_draw(wearon_group)
-    wearon_group.update()
+    custom_draw(objects_group)
+    objects_group.update()
 
     player.draw()
 
