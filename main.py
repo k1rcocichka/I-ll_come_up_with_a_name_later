@@ -67,10 +67,11 @@ class Object(pygame.sprite.Sprite):
 
 
 class Wearon(Object):
-    def __init__(self, position, image, name, full_clip, clip, *groups):
+    def __init__(self, position, image, name, full_clip, damage, clip, *groups):
         super().__init__(position, image, name, *groups)
         self.full_clip = full_clip
         self.clip = clip
+        self.damage = damage
 
 
 class Medkit(Object):
@@ -158,6 +159,7 @@ class Player():
         self.speed_y = 2
         self.angle = 0
         self.hp = 190
+        self.player_hit_clock = 0
         self.inventory = [None, None, None]
 
         self.inventory_sprite = load_image("inventory.png")
@@ -214,9 +216,9 @@ class Player():
             if self.rect.colliderect(box.rect):
                 self.rect.center = original_position
 
-
-        if player.rect.colliderect(enemy):
-            self.rect.center = original_position
+        for enemy in enemy_group:
+            if player.rect.colliderect(enemy) and enemy.hp > 0:
+                self.rect.center = original_position
         
     """штука для отслежки курсора"""
     def angle_finder(self, target_pos):
@@ -266,6 +268,7 @@ class Enemy(pygame.sprite.Sprite):
         super().__init__(*group)
         self.sprite = Enemy.image
         self.rect = self.sprite.get_rect()
+        self.rect.inflate_ip(-50, -50)
         self.mask = pygame.mask.from_surface(self.sprite)
 
         self.rect.center = position
@@ -292,7 +295,7 @@ class Enemy(pygame.sprite.Sprite):
             if self.rect.colliderect(box.rect):
                 self.rect.center = original_position
 
-        if self.rect.colliderect(player) and self.hp >= 0:
+        if self.rect.colliderect(player) and self.hp > 0:
             time_now = pygame.time.get_ticks()
             self.rect.center = original_position
             if time_now > player.player_hit_clock:
@@ -328,7 +331,8 @@ class Enemy(pygame.sprite.Sprite):
             self.speed_x = 0
             self.speed_y = 0
         self.move()
-        
+
+
 class Cell:
     def __init__(self, x, y, cell_type):
         self.rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
@@ -369,8 +373,8 @@ objects_group = pygame.sprite.Group()
 #экземпляры класса
 player = Player(image="player.png", position=(300, 400))
 enemy = Enemy(position=(500, 500))
-mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяушка", full_clip=30, clip=30)
-gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15)
+mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяушка", full_clip=30, clip=30, damage=50)
+gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15, damage=50)
 medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
 x, y = 200, 200
@@ -390,9 +394,8 @@ inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
 
 #карта
-map = load_image("map.png")
+map = load_image("map1.png")
 map = pygame.transform.scale(map, (1000, 1000))
-
 
 armor_image = load_image("shotgun.png")
 weapon_image = load_image("M4A1-S.png")
@@ -495,56 +498,92 @@ while running:
     if inventory_open:
         # Отображаем инвентарь
         screen.blit(inventor_image, (center_x, center_y))
-        #броня с лево сверху
-        pygame.draw.rect(screen, 'yellow', (137, 137, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (179, 137, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (221, 137, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (137, 179, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (179, 179, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (221, 179, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (137, 220, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (179, 220, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (179, 261, 36, 36))
-        #картинка игрока с права сверху
-        pygame.draw.rect(screen, 'yellow', (387, 137, 78, 119))
-        pygame.draw.rect(screen, 'yellow', (387, 261, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (429, 261, 36, 36))
-        #инвентарь 1 ряд
-        pygame.draw.rect(screen, 'yellow', (137, 345, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (179, 345, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (221, 345, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (262, 345, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (304, 345, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (345, 345, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (387, 345, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (429, 345, 36, 36))
-        # инвентарь 2 ряд
-        pygame.draw.rect(screen, 'yellow', (137, 387, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (179, 387, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (221, 387, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (262, 387, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (304, 387, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (345, 387, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (387, 387, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (429, 387, 36, 36))
-        # инвентарь 3 ряд
-        pygame.draw.rect(screen, 'yellow', (137, 429, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (179, 429, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (221, 429, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (262, 429, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (304, 429, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (345, 429, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (387, 429, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (429, 429, 36, 36))
-        # инвентарь 4 ряд
-        pygame.draw.rect(screen, 'yellow', (137, 471, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (179, 471, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (221, 471, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (262, 471, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (304, 471, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (345, 471, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (387, 471, 36, 36))
-        pygame.draw.rect(screen, 'yellow', (429, 471, 36, 36))
+        if event.type == pygame.MOUSEBUTTONDOWN:
+            for cell in cells:
+                if cell.item and cell.item.rect.collidepoint(event.pos):
+                    dragging_item = cell.item
+                    original_cell = cell
+                    cell.item = None
+                    break
+
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                for cell in cells:
+                    if cell.item and cell.item.rect.collidepoint(event.pos):
+                        dragging_item = cell.item
+                        original_cell = cell
+                        cell.item = None
+                        break
+
+            if event.type == pygame.MOUSEBUTTONUP:
+                if dragging_item:
+                    placed = False
+                    for cell in cells:
+                        if cell.rect.collidepoint(event.pos):
+                            if cell.cell_type != 'inventory' and cell.cell_type == dragging_item.item_type:
+                                dragging_item.rect.topleft = cell.rect.topleft
+                                cell.item = dragging_item
+                                placed = True
+                                break
+                            elif cell.cell_type == 'inventory':
+                                if cell.item is None:  # Если ячейка пустая
+                                    dragging_item.rect.topleft = cell.rect.topleft
+                                    cell.item = dragging_item
+                                    placed = True
+                                    break
+                                else:  # Если ячейка занята, возвращаем предмет обратно
+                                    original_cell.item = dragging_item
+                                    dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
+                                    placed = True
+                                    break
+
+                    if not placed and original_cell:
+                        dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
+                        original_cell.item = dragging_item
+
+                    dragging_item = None
+                    original_cell = None
+
+            if event.type == pygame.MOUSEMOTION:
+                if dragging_item:
+                    dragging_item.rect.topleft = event.pos
+
+
+        # Отрисовка ячеек
+        for cell in cells:
+            cell.draw(screen)
+
+        # Отрисовка перетаскиваемого предмета, если он есть
+        if dragging_item:
+            screen.blit(dragging_item.image, dragging_item.rect)
+
+        pygame.display.flip()
+
+        if event.type == pygame.MOUSEBUTTONUP:
+            if dragging_item:
+                placed = False
+                for cell in cells:
+                    if cell.rect.collidepoint(event.pos):
+                        if cell.item is None:  # Если ячейка пустая
+                            dragging_item.rect.topleft = cell.rect.topleft
+                            cell.item = dragging_item
+                            placed = True
+                            break
+                        else:  # Если ячейка занята, возвращаем предмет обратно
+                            original_cell.item = dragging_item
+                            dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
+                            placed = True
+                            break
+
+                if not placed and original_cell:
+                    dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
+                    original_cell.item = dragging_item
+
+                dragging_item = None
+                original_cell = None
+
+        if event.type == pygame.MOUSEMOTION:
+            if dragging_item:
+                dragging_item.rect.topleft = event.pos
 
     pygame.display.flip()
 
