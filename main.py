@@ -328,6 +328,37 @@ class Enemy(pygame.sprite.Sprite):
             self.speed_x = 0
             self.speed_y = 0
         self.move()
+        
+class Cell:
+    def __init__(self, x, y, cell_type):
+        self.rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
+        self.cell_type = cell_type
+        self.item = None
+
+    def draw(self, screen):
+        # Создаем полностью прозрачный цвет
+        color = (GRAY[0], GRAY[1], GRAY[2], 0)  # Полностью прозрачный
+        surface = pygame.Surface((CELL_SIZE, CELL_SIZE), pygame.SRCALPHA)
+        surface.fill(color)
+        screen.blit(surface, self.rect.topleft)
+
+        if self.item:
+            self.item.draw(screen)
+
+# Классы для предметов
+class Item:
+    def __init__(self, x, y, item_type, image):
+        self.rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
+        self.item_type = item_type
+        self.image = image
+
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+
+cells = [Cell(x, y, 'inventory') for x, y in inventory_positions] + \
+        [Cell(x, y, 'armor') for x, y in armor_positions] + \
+        [Cell(x, y, 'weapon') for x, y in weapon_positions]
 
 #группы
 bullet_group = pygame.sprite.Group()
@@ -361,12 +392,30 @@ inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inven
 #карта
 map = load_image("map.png")
 map = pygame.transform.scale(map, (1000, 1000))
+
+
+armor_image = load_image("shotgun.png")
+weapon_image = load_image("M4A1-S.png")
+
+armor_image = pygame.transform.scale(armor_image, (36, 36))
+weapon_image = pygame.transform.scale(weapon_image, (36, 36))
+
+# Создание предметов
+armor_item = Item(cells[0].rect.x, cells[0].rect.y,'armor', armor_image)
+weapon_item = Item(cells[1].rect.x, cells[1].rect.y,'weapon', weapon_image)
+
+# Помещение предметов в ячейки
+cells[0].item = armor_item
+cells[1].item = weapon_item
 map_rect = map.get_rect()
 
-#иконка
 programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
 inventory_open = False
+running = True
+dragging_item = None
+original_cell = None
+
 
 #запуск игры
 while running:
