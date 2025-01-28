@@ -1,5 +1,6 @@
 import pygame
 import sys
+import random
 import fist_scene
 
 
@@ -11,47 +12,90 @@ class GameMenu:
         self.screen = pygame.display.set_mode((self.width, self.height))
         pygame.display.set_caption(title)
 
-        # Цвета
-        self.WHITE = (255, 255, 255)
-        self.BLACK = (0, 0, 0)
-        self.GRAY = (200, 200, 200)
-        self.RED = (255, 0, 0)
-
         self.font = pygame.font.Font(None, 36)
-        self.background_image = pygame.image.load("меню игры.jpg")
+        self.background_image = pygame.image.load("меню игры.jpg").convert()  # Convert to improve performance
         self.background_image = pygame.transform.scale(self.background_image, (width, height))
 
-        # Кнопки меню
         self.menu_items = ["Начать", "Продолжить", "Титры", "Достижение", "Трофеи", "Загрузить", "Настройки", "Выход"]
         self.button_rects = []
         self.button_colors = []
         self.button_height = 50
         self.button_spacing = 10
         self.start_y = self.height // 2 - (len(self.menu_items) * (self.button_height + self.button_spacing)) // 2
+        self.music = pygame.mixer.Sound("музыка меню.mp3")
+        self.music.play(-1)  # бесконечное воспроизведение музыки
 
         self._create_buttons()
-        self.music = pygame.mixer.Sound("музыка меню.mp3")
-        self.music.play()
+        self.particles = []  # Список для хранения частиц
+        self.leaf_images = self._load_leaf_images()
+
+    def _load_leaf_images(self):
+        # Загрузка изображений листьев
+        leaf_filenames = ["листок1.png", "листок2.png", "листок3.png"]
+        leaf_images = []
+        for filename in leaf_filenames:
+            try:
+                image = pygame.image.load(filename).convert_alpha()
+                leaf_images.append(image)
+            except pygame.error as e:
+                print(f"Ошибка загрузки изображения {filename}: {e}")
+                return []
+
+        return leaf_images
 
     def _create_buttons(self):
         for i, item in enumerate(self.menu_items):
-            text_surface = self.font.render(item, True, self.BLACK)
-            text_rect = text_surface.get_rect(center=(self.width // 2, self.start_y + i * (self.button_height + self.button_spacing) + self.button_height // 2))
+            text_surface = self.font.render(item, True, 'black')
+            text_rect = text_surface.get_rect(center=(
+            self.width // 2, self.start_y + i * (self.button_height + self.button_spacing) + self.button_height // 2))
             button_rect = text_rect.inflate(20, 20)
             self.button_rects.append(button_rect)
-            self.button_colors.append(self.GRAY)
+            self.button_colors.append('gray')
 
-    def draw_menu(self): #отрисовывание меню на экране
+    def create_leaf_particle(self, x, y):
+        leaf_image = random.choice(self.leaf_images)  # Выбор случайного изображения листика
+        scale = random.uniform(0.01, 0.05)  # Случайное масштабирование
+        leaf_image = pygame.transform.scale(leaf_image,
+                                            (int(leaf_image.get_width() * scale), int(leaf_image.get_height() * scale)))
+
+        angle = random.uniform(-10, 360)  # Случайный угол поворота
+        leaf_image = pygame.transform.rotate(leaf_image, angle)
+        vx = random.uniform(-0.5, 0.5)  # Скорость по горизонтали
+        vy = random.uniform(0.5, 1)  # Скорость по вертикали
+        rotation_speed = random.uniform(-0.5, 0.5)  # скорость вращения
+        life = random.randint(100, 2000)  # время жизни частицы
+        self.particles.append(
+            {"x": x, "y": y, "vx": vx, "vy": vy, "image": leaf_image, "angle": angle, "rotation_speed": rotation_speed,
+             "life": life})
+
+    def update_particles(self):
+        for particle in self.particles[:]:  # итерируемся по копии списка для удаления
+            particle["x"] += particle["vx"]
+            particle["y"] += particle["vy"]
+            particle["angle"] += particle["rotation_speed"]  # вращение листика
+            particle["life"] -= 1
+            if particle["y"] > self.height + 50 or particle["life"] <= 0:
+                self.particles.remove(particle)  # удаление частиц которые вышли за границы
+
+    def draw_particles(self):
+        for particle in self.particles:
+            rotated_image = pygame.transform.rotate(particle["image"], particle["angle"])  # поворот изображения
+            rect = rotated_image.get_rect(
+                center=(int(particle["x"]), int(particle["y"])))  # меняем центр  для отрисовки
+            self.screen.blit(rotated_image, rect)  # отрисовываем
+
+    def draw_menu(self):
         self.screen.blit(self.background_image, (0, 0))
         for i, rect in enumerate(self.button_rects):
             pygame.draw.rect(self.screen, self.button_colors[i], rect)
-            text_surface = self.font.render(self.menu_items[i], True, self.BLACK)
+            text_surface = self.font.render(self.menu_items[i], True, 'black')
             text_rect = text_surface.get_rect(center=rect.center)
             self.screen.blit(text_surface, text_rect)
+        self.draw_particles()  # отрисовываем частицы
         pygame.display.flip()
 
     def run(self):
-        #основной игровой цикл
+        # основной игровой цикл
         running = True
         while running:
             for event in pygame.event.get():
@@ -64,42 +108,44 @@ class GameMenu:
                             # Действия при нажатии на кнопку
                             if self.menu_items[i] == "Начать":
                                 self.music.stop()
-                                # ЗАПУСК ПЕРВОЙ КАТ СЦЕНЫ
+                                    # ЗАПУСК ПЕРВОЙ КАТ СЦЕНЫ
                                 fist_scene.main()
                             elif self.menu_items[i] == "Настройки":
                                 print("настройки")
-                                # ОТКРЫТИЕ ОКОШКА С НАСТРОЙКАМИ
+                                    # ОТКРЫТИЕ ОКОШКА С НАСТРОЙКАМИ
                             elif self.menu_items[i] == "Выход":
-                                running = False # Выход из игры
+                                running = False  # Выход из игры
                             elif self.menu_items[i] == "Продолжить":
                                 print("продолжить")
-                                # КОД ПРОДОЛЖАЮЩИЙ ИГРУ
+                                    # КОД ПРОДОЛЖАЮЩИЙ ИГРУ
                             elif self.menu_items[i] == "Титры":
                                 print("Титры")
-                                # вопрос, что вы хотите сделать в титрах?
+                                    # вопрос, что вы хотите сделать в титрах?
                             elif self.menu_items[i] == "Достижение":
                                 print("Достижение")
-                                #pygame.mixer.Sound("звук монет.mp3").play()
-                                # Код с достижением, думаю добавить может звук рассыпавшихся монет?
+                                    # pygame.mixer.Sound("звук монет.mp3").play()
+                                    # Код с достижением, думаю добавить может звук рассыпавшихся монет?
                             elif self.menu_items[i] == "Трофеи":
                                 print("Трофеи")
-                                #код для трофеев
+                                    # код для трофеев
                             elif self.menu_items[i] == "Загрузить":
                                 print("Загрузить")
-                                #вопрос, что сюда будут загружать?
+                                    # вопрос, что сюда будут загружать?
                 if event.type == pygame.MOUSEMOTION:
                     mouse_pos = pygame.mouse.get_pos()
                     for i, rect in enumerate(self.button_rects):
                         if rect.collidepoint(mouse_pos):
-                            self.button_colors[i] = self.RED
+                            self.button_colors[i] = 'red'
                         else:
-                            self.button_colors[i] = self.GRAY
+                            self.button_colors[i] = 'gray'
+                if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
+                    self.create_leaf_particle(event.pos[0], event.pos[1])
+            self.update_particles()  # обновляем частицы
             self.draw_menu()
-
         pygame.quit()
         sys.exit()
 
 
 if __name__ == '__main__':
-    menu = GameMenu(600, 600, "Игровое Меню")
+    menu = GameMenu(800, 600, "Игровое Меню")
     menu.run()
