@@ -78,15 +78,15 @@ def main():
     screen_height = 600
     screen = create_screen(screen_width, screen_height)
 
-    image_paths = ['город.jpg', "коридор.jpg", "1.jpg", "2.jpg", "3.jpg", "открытое письмо.png", "завещание.png",
-                   "завещание.png", "завещание.png"]
+    image_paths = ['data/город.jpg', "data/коридор.jpg", "data/1.jpg", "data/2.jpg", "data/3.jpg", "data/открытое письмо.png", "data/завещание.png",
+                   "data/завещание.png", "data/завещание.png"]
     images = load_images(image_paths, screen_width, screen_height)
 
-    sound_paths = ["звуки шагов.mp3", "door-bell.mp3", "open door.mp3", "шелест бумаги.mp3", "фоновая 1 кат сцена.mp3",
-                   "фоновая 1 кат сцена.mp3", "фоновая 1 кат сцена.mp3", "фоновая 1 кат сцена.mp3", "фоновая 1 кат сцена.mp3"]
+    sound_paths = ["data/звуки шагов.mp3", "data/door-bell.mp3", "data/open door.mp3", "data/шелест бумаги.mp3", "data/фоновая 1 кат сцена.mp3",
+                   "data/фоновая 1 кат сцена.mp3", "data/фоновая 1 кат сцена.mp3", "data/фоновая 1 кат сцена.mp3", "data/фоновая 1 кат сцена.mp3"]
     click_sounds = load_sounds(sound_paths)
 
-    background_music = pygame.mixer.Sound("фоновая 1 кат сцена.mp3")  # Фоновая музыка
+    background_music = pygame.mixer.Sound("data/фоновая 1 кат сцена.mp3")  # Фоновая музыка
     texts = [
         "",
         "",

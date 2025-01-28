@@ -18,7 +18,7 @@ class GameMenu:
         self.RED = (255, 0, 0)
 
         self.font = pygame.font.Font(None, 36)
-        self.background_image = pygame.image.load("меню игры.jpg")
+        self.background_image = pygame.image.load("data/меню игры.jpg")
         self.background_image = pygame.transform.scale(self.background_image, (width, height))
 
         # Кнопки меню
@@ -30,7 +30,7 @@ class GameMenu:
         self.start_y = self.height // 2 - (len(self.menu_items) * (self.button_height + self.button_spacing)) // 2
 
         self._create_buttons()
-        self.music = pygame.mixer.Sound("музыка меню.mp3")
+        self.music = pygame.mixer.Sound("data/музыка меню.mp3")
         self.music.play()
 
     def _create_buttons(self):
@@ -77,16 +77,21 @@ class GameMenu:
                             elif self.menu_items[i] == "Титры":
                                 print("Титры")
                                 # вопрос, что вы хотите сделать в титрах?
+                                # расписать кто что делал кратко
                             elif self.menu_items[i] == "Достижение":
                                 print("Достижение")
                                 #pygame.mixer.Sound("звук монет.mp3").play()
                                 # Код с достижением, думаю добавить может звук рассыпавшихся монет?
+                                # По уровням будут раскиданы разные коллекционки (как выглядеть будут ещё не придумал)
+                                # Тут должны будут отобраться все которые мы собрали при прохождении игры
+                                # в файле с сейвом будут прописаны
                             elif self.menu_items[i] == "Трофеи":
                                 print("Трофеи")
                                 #код для трофеев
                             elif self.menu_items[i] == "Загрузить":
                                 print("Загрузить")
                                 #вопрос, что сюда будут загружать?
+                                #Андерей заргузит уровни и тут нужна будт заргузка уровней по выбору
                 if event.type == pygame.MOUSEMOTION:
                     mouse_pos = pygame.mouse.get_pos()
                     for i, rect in enumerate(self.button_rects):

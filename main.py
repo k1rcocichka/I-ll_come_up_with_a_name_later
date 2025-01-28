@@ -65,10 +65,11 @@ class Object(pygame.sprite.Sprite):
 
 
 class Wearon(Object):
-    def __init__(self, position, image, name, full_clip, clip, *groups):
+    def __init__(self, position, image, name, full_clip, clip, damage, *groups):
         super().__init__(position, image, name, *groups)
         self.full_clip = full_clip
         self.clip = clip
+        self.damage = damage
 
 
 class Medkit(Object):
@@ -82,6 +83,12 @@ class ClipsWearon(Object):
         super().__init__(position, image, name, *groups)
         self.clips_many = clips_many
         self.use_clips = use_clips
+
+
+class BaseballBat(Object):
+    def __init__(self, position, image, name, damage, *groups):
+        super().__init__(position, image, name, *groups)
+        self.damage = damage
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -212,10 +219,8 @@ class Player():
             if self.rect.colliderect(box.rect):
                 self.rect.center = original_position
 
-        if player.rect.colliderect(enemy) and enemy.hp >= 0:
+        if player.rect.colliderect(enemy):
             self.rect.center = original_position
-            self.hp -= self.hp - 10
-            print(self.hp)
         
     """штука для отслежки курсора"""
     def angle_finder(self, target_pos):
@@ -279,7 +284,7 @@ class Enemy(pygame.sprite.Sprite):
         self.target(target_pos)
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        if self.hp >= 0:
+        if self.hp > 0:
             screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
 
     def move(self):
@@ -297,7 +302,7 @@ class Enemy(pygame.sprite.Sprite):
 
         for bullets in bullet_group:
             if self.rect.colliderect(bullet) and self.hp >= 0:
-                self.hp = self.hp - 10
+                self.hp = self.hp - player.inventory[player.inventory_cell].damage
                 bullet.kill()
 
     def border(self):
@@ -312,10 +317,14 @@ class Enemy(pygame.sprite.Sprite):
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
     def target(self, target_pos):
-        if (player.rect.x > self.rect.x - 200 and player.rect.y > self.rect.y - 200) and (player.rect.x < self.rect.x + 200 and player.rect.y < self.rect.y + 200):
+        if (player.rect.x > self.rect.x - 200 and player.rect.y > self.rect.y - 200) \
+            and (player.rect.x < self.rect.x + 200 and player.rect.y < self.rect.y + 200):
             self.angle_finder(target_pos)
             self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
             self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
+            if (player.rect.x > self.rect.x - 50 and player.rect.y > self.rect.y - 50) \
+            and (player.rect.x < self.rect.x + 50 and player.rect.y < self.rect.y + 50):
+                pass
         else:
             self.speed_x = 0
             self.speed_y = 0
@@ -329,9 +338,9 @@ objects_group = pygame.sprite.Group()
 
 #экземпляры класса
 player = Player(image="player.png", position=(300, 400))
-enemy = Enemy(position=(500, 500))
-mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяушка", full_clip=30, clip=30)
-gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15)
+enemy = Enemy(position=(600, 500))
+mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяушка", full_clip=30, clip=30, damage=50)
+gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15, damage=20)
 medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
 x, y = 200, 200
@@ -351,7 +360,7 @@ inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
 
 #карта
-map = load_image("map.png")
+map = load_image("map1.png")
 map = pygame.transform.scale(map, (1000, 1000))
 map_rect = map.get_rect()
 
