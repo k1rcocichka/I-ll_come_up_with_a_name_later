@@ -67,11 +67,10 @@ class Object(pygame.sprite.Sprite):
 
 
 class Wearon(Object):
-    def __init__(self, position, image, name, full_clip, clip, damage, *groups):
+    def __init__(self, position, image, name, full_clip, clip, *groups):
         super().__init__(position, image, name, *groups)
         self.full_clip = full_clip
         self.clip = clip
-        self.damage = damage
 
 
 class Medkit(Object):
@@ -85,12 +84,6 @@ class ClipsWearon(Object):
         super().__init__(position, image, name, *groups)
         self.clips_many = clips_many
         self.use_clips = use_clips
-
-
-class BaseballBat(Object):
-    def __init__(self, position, image, name, damage, *groups):
-        super().__init__(position, image, name, *groups)
-        self.damage = damage
 
 
 class Bullet(pygame.sprite.Sprite):
@@ -165,7 +158,6 @@ class Player():
         self.speed_y = 2
         self.angle = 0
         self.hp = 190
-        self.player_hit_clock = 0
         self.inventory = [None, None, None]
 
         self.inventory_sprite = load_image("inventory.png")
@@ -328,8 +320,7 @@ class Enemy(pygame.sprite.Sprite):
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
     def target(self, target_pos):
-        if (player.rect.x > self.rect.x - 200 and player.rect.y > self.rect.y - 200) \
-            and (player.rect.x < self.rect.x + 200 and player.rect.y < self.rect.y + 200):
+        if (player.rect.x > self.rect.x - 200 and player.rect.y > self.rect.y - 200) and (player.rect.x < self.rect.x + 200 and player.rect.y < self.rect.y + 200):
             self.angle_finder(target_pos)
             self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
             self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
@@ -346,9 +337,9 @@ objects_group = pygame.sprite.Group()
 
 #экземпляры класса
 player = Player(image="player.png", position=(300, 400))
-enemy = Enemy(position=(600, 500))
-mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяушка", full_clip=30, clip=30, damage=50)
-gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15, damage=20)
+enemy = Enemy(position=(500, 500))
+mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяушка", full_clip=30, clip=30)
+gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15)
 medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
 x, y = 200, 200
@@ -368,7 +359,7 @@ inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
 
 #карта
-map = load_image("map1.png")
+map = load_image("map.png")
 map = pygame.transform.scale(map, (1000, 1000))
 map_rect = map.get_rect()
 
@@ -439,7 +430,7 @@ while running:
     player.move()
     player.angle_finder(pygame.mouse.get_pos())
 
-    enemy_group.update(player, (player.rect.x - camera_x + 20, player.rect.y - camera_y + 20))
+    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
     
     custom_draw(bullet_group)
     bullet_group.update()
