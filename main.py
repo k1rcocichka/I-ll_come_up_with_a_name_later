@@ -6,6 +6,8 @@ import random
 from settings import *
 
 #создание игры
+HIT_CLOCK = 400
+
 pygame.init() 
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((HEIGHT, WIDTH))
@@ -163,6 +165,7 @@ class Player():
         self.speed_y = 2
         self.angle = 0
         self.hp = 190
+        self.player_hit_clock = 0
         self.inventory = [None, None, None]
 
         self.inventory_sprite = load_image("inventory.png")
@@ -219,6 +222,7 @@ class Player():
             if self.rect.colliderect(box.rect):
                 self.rect.center = original_position
 
+
         if player.rect.colliderect(enemy):
             self.rect.center = original_position
         
@@ -270,7 +274,6 @@ class Enemy(pygame.sprite.Sprite):
         super().__init__(*group)
         self.sprite = Enemy.image
         self.rect = self.sprite.get_rect()
-        self.rect.inflate_ip(-50, -50)
         self.mask = pygame.mask.from_surface(self.sprite)
 
         self.rect.center = position
@@ -298,7 +301,15 @@ class Enemy(pygame.sprite.Sprite):
                 self.rect.center = original_position
 
         if self.rect.colliderect(player) and self.hp >= 0:
+            time_now = pygame.time.get_ticks()
             self.rect.center = original_position
+            if time_now > player.player_hit_clock:
+                player.hp = player.hp - 10
+                print(self.hp)
+                print('hit')
+                player.player_hit_clock = time_now + HIT_CLOCK
+            else:
+                print('player hit cooldown')
 
         for bullets in bullet_group:
             if self.rect.colliderect(bullet) and self.hp >= 0:
@@ -322,9 +333,6 @@ class Enemy(pygame.sprite.Sprite):
             self.angle_finder(target_pos)
             self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
             self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
-            if (player.rect.x > self.rect.x - 50 and player.rect.y > self.rect.y - 50) \
-            and (player.rect.x < self.rect.x + 50 and player.rect.y < self.rect.y + 50):
-                pass
         else:
             self.speed_x = 0
             self.speed_y = 0
@@ -431,7 +439,7 @@ while running:
     player.move()
     player.angle_finder(pygame.mouse.get_pos())
 
-    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
+    enemy_group.update(player, (player.rect.x - camera_x + 20, player.rect.y - camera_y + 20))
     
     custom_draw(bullet_group)
     bullet_group.update()
