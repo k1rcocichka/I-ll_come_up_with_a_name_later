@@ -7,18 +7,6 @@ from settings import *
 from PIL import Image
 
 
-def split_animated_gif(gif_file_path):
-    ret = []
-    gif = Image.open(gif_file_path)
-    for frame_index in range(gif.n_frames):
-        gif.seek(frame_index)
-        frame_rgba = gif.convert("RGBA")
-        pygame_image = pygame.image.fromstring(
-            frame_rgba.tobytes(), frame_rgba.size, frame_rgba.mode
-        )
-        ret.append(pygame_image)
-    return ret
-
 #создание игры
 HIT_CLOCK = 400
 
@@ -53,13 +41,27 @@ def load_image(name, colorkey=None):
         image = image.convert_alpha()
     return image
 
+#ф-ция для анимации гифок
+def split_animated_gif(gif_file_path):
+    ret = []
+    gif = Image.open(gif_file_path)
+    for frame_index in range(gif.n_frames):
+        gif.seek(frame_index)
+        frame_rgba = gif.convert("RGBA")
+        pygame_image = pygame.image.fromstring(
+            frame_rgba.tobytes(), frame_rgba.size, frame_rgba.mode
+        )
+        ret.append(pygame_image)
+    return ret
+
 #для рисование групп
 def custom_draw(group):
     for sprite in group:
         sprite.draw()
 
-#класс объктов
+
 class Object(pygame.sprite.Sprite):
+    """класс объктов"""
     image_e = load_image("e.png")
     image_e = pygame.transform.scale(image_e, (40, 40))
     def __init__(self, position, image, name, *groups):
@@ -91,6 +93,7 @@ class Object(pygame.sprite.Sprite):
 
 
 class Wearon(Object):
+    """класс оружия"""
     def __init__(self, position, image, name, full_clip, damage, clip, *groups):
         super().__init__(position, image, name, *groups)
         self.full_clip = full_clip
@@ -99,12 +102,14 @@ class Wearon(Object):
 
 
 class Medkit(Object):
+    """класс аптечки"""
     def __init__(self, position, image, use_medkit, name, *groups):
         super().__init__(position, image, name,*groups)
         self.use_medkit = use_medkit
 
 
 class ClipsWearon(Object):
+    """класс магазин с патронами"""
     def __init__(self, position, image, clips_many, use_clips, name, *groups):
         super().__init__(position, image, name, *groups)
         self.clips_many = clips_many
@@ -137,6 +142,10 @@ class Bullet(pygame.sprite.Sprite):
                 box.hp = box.hp - 10
                 print(box.hp)
                 self.kill()
+
+        for barrier in barrier_group:
+            if self.rect.colliderect(barrier.rect):
+                self.kill()
         
     def draw(self):
         """рисууем пулю"""
@@ -144,8 +153,9 @@ class Bullet(pygame.sprite.Sprite):
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
 
-#анимация
+
 class AnimatedSprite(pygame.sprite.Sprite):
+    """класс анимация"""
     def __init__(self, sheet, columns, rows, x, y):
         super().__init__()
         self.frames = []
@@ -166,6 +176,50 @@ class AnimatedSprite(pygame.sprite.Sprite):
     def update(self):
         self.cur_frame = (self.cur_frame + 1) % len(self.frames)
         self.image = self.frames[self.cur_frame]
+
+
+screen_rect = (0, 0, WIDTH, HEIGHT)
+
+
+class Particle(pygame.sprite.Sprite):
+    """класс частиц"""
+    # сгенерируем частицы разного размера
+    fire = [load_image("blood.png")]
+    for scale in (5, 10, 20):
+        fire.append(pygame.transform.scale(fire[0], (scale, scale)))
+
+    def __init__(self, pos, dx, dy):
+        super().__init__(all_sprites)
+        self.image = random.choice(self.fire)
+        self.rect = self.image.get_rect()
+
+        # у каждой частицы своя скорость — это вектор
+        self.velocity = [dx, dy]
+        # и свои координаты
+        self.rect.x, self.rect.y = pos
+
+        # гравитация будет одинаковой (значение константы)
+        self.gravity = GRAVITY
+
+    def update(self):
+        # применяем гравитационный эффект: 
+        # движение с ускорением под действием гравитации
+        self.velocity[1] += self.gravity
+        # перемещаем частицу
+        self.rect.x += self.velocity[0]
+        self.rect.y += self.velocity[1]
+        # убиваем, если частица ушла за экран
+        if not self.rect.colliderect(screen_rect):
+            self.kill()
+
+#ф-ция создания частиц
+def create_particles(position):
+    # количество создаваемых частиц
+    particle_count = 20
+    # возможные скорости
+    numbers = range(-5, 6)
+    for _ in range(particle_count):
+        Particle(position, random.choice(numbers), random.choice(numbers))
 
 
 class Player():
@@ -240,6 +294,10 @@ class Player():
             if self.rect.colliderect(box.rect) and box.hp > 0:
                 self.rect.center = original_position
 
+        for barrier in barrier_group:
+            if self.rect.colliderect(barrier.rect):
+                self.rect.center = original_position
+
         for enemy in enemy_group:
             if player.rect.colliderect(enemy) and enemy.hp > 0:
                 self.rect.center = original_position
@@ -266,20 +324,27 @@ class Player():
 
 class Barrier(pygame.sprite.Sprite):
     """констурктор препятствий"""
-    def __init__(self, position, image, image_update, *group):
+    def __init__(self, position, image, *group):
         super().__init__(*group)
         image = load_image(image)
         image = pygame.transform.scale(image, (80, 80))
         self.sprite = image
         self.rect = self.sprite.get_rect()
         self.rect.inflate_ip(-20, -20)
+        self.rect.center = position
 
+    def draw(self):
+        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
+
+
+class Box(Barrier):
+    """класс лут боксов"""
+    def __init__(self, position, image, image_update, *group):
+        super().__init__(position, image, *group)
         image_update = load_image(image_update)
         image_update = pygame.transform.scale(image_update, (80, 80))
         self.sprite_update = image_update
         self.rect_update = self.sprite_update.get_rect()
-
-        self.rect.center = position
         self.rect_update.center = position
 
         self.hp = 20
@@ -359,7 +424,7 @@ class Enemy(pygame.sprite.Sprite):
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
     def target(self, target_pos):
-        if (player.rect.x > self.rect.x - 200 and player.rect.y > self.rect.y - 200) and (player.rect.x < self.rect.x + 200 and player.rect.y < self.rect.y + 200):
+        if (player.rect.x > self.rect.x - 250 and player.rect.y > self.rect.y - 250) and (player.rect.x < self.rect.x + 250 and player.rect.y < self.rect.y + 250):
             self.angle_finder(target_pos)
             self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
             self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
@@ -370,6 +435,7 @@ class Enemy(pygame.sprite.Sprite):
 
 
 class Cell:
+    """клас хз чего"""
     def __init__(self, x, y, cell_type):
         self.rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
         self.cell_type = cell_type
@@ -385,8 +451,9 @@ class Cell:
         if self.item:
             self.item.draw(screen)
 
-# Классы для предметов
+
 class Item:
+    """классы для предметов наверно"""
     def __init__(self, x, y, item_type, image):
         self.rect = pygame.Rect(x, y, CELL_SIZE, CELL_SIZE)
         self.item_type = item_type
@@ -397,6 +464,7 @@ class Item:
 
 
 class Fumo(pygame.sprite.Sprite):
+    """фумо фумо (коллекционки)"""
     image_e = load_image("e.png")
     image_e = pygame.transform.scale(image_e, (40, 40))
     def __init__(self, position, image, name, sound, *groups):
@@ -445,10 +513,11 @@ bullet_group = pygame.sprite.Group()
 boxs_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 objects_group = pygame.sprite.Group()
+barrier_group = pygame.sprite.Group()
 
 #экземпляры класса
-player = Player(image="player.png", position=(300, 400))
-enemy = Enemy(position=(500, 500))
+player = Player(image="player.png", position=(400, 400))
+enemy = Enemy(position=(700, 450))
 mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяушка", full_clip=30, clip=30, damage=50)
 gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15, damage=50)
 medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
@@ -457,11 +526,19 @@ fumo = AnimatedSprite(load_image("fumo.png"), 11, 1, 50, 50)
 fumo = Fumo(position=(200, 400), image=fumo, name="fumo", sound="data/baka.wav")
 
 x, y = 200, 200
-for box in range(5):
+for _ in range(5):
     x += 100
     cords = x, y
-    box = Barrier(position=cords, image="box.png", image_update="wreckage.png")
+    barrier = Barrier(position=cords, image="box.png")
+    barrier_group.add(barrier)
+
+x, y = 200, 700
+for _ in range(5):
+    x += 100
+    cords = x, y
+    box = Box(position=cords, image="box.png", image_update="wreckage.png")
     boxs_group.add(box)
+    print("box")
 
 objects_group.add(medkit)
 objects_group.add(mka)
@@ -475,7 +552,7 @@ inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inven
 
 #карта
 map = load_image("map1.png")
-map = pygame.transform.scale(map, (1000, 1000))
+map = pygame.transform.scale(map, (2000, 2000))
 
 armor_image = load_image("shotgun.png")
 weapon_image = load_image("M4A1-S.png")
@@ -595,6 +672,9 @@ while running:
 
     custom_draw(objects_group)
     objects_group.update()
+
+    custom_draw(barrier_group)
+    barrier_group.update()
 
     player.draw()
 
