@@ -12,6 +12,7 @@ DARKGREY = (40, 40, 40)
 LIGHTGREY = (100, 100, 100)
 YELLOW = (255, 255, 0)
 GOLD = (255,215,0)
+GRAY = (128, 128, 128)
 
 #конфиг
 TITLE = "Cursed wood"

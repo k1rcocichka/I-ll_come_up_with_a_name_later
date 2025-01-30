@@ -28,6 +28,16 @@ screen = pygame.display.set_mode((HEIGHT, WIDTH))
 pygame.display.set_caption(TITLE)
 font = pygame.font.SysFont('serif', 50)
 
+# Настройки времени суток
+time_of_day = {
+    "morning": {"length": 10000, "start_alpha": 210, "end_alpha": 128},  # Утро (5 секунд)
+    "day": {"length": 10000, "start_alpha": 128, "end_alpha": 0},  # День (10 секунд)
+    "evening": {"length": 1000, "start_alpha": 0, "end_alpha": 128},  # Вечер (5 секунд)
+    "night": {"length": 10000, "start_alpha": 128, "end_alpha": 210},  # Ночь (10 секунд)
+}
+current_time = 0  # Текущее время в текущей фазе
+current_phase = "morning"  # Текущая фаза времени суток
+
 #тут загрузка картинок
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -123,7 +133,7 @@ class Bullet(pygame.sprite.Sprite):
             self.kill()
         
         for box in boxs_group:
-            if self.rect.colliderect(box.rect):
+            if self.rect.colliderect(box.rect) and box.hp > 0:
                 box.hp = box.hp - 10
                 print(box.hp)
                 self.kill()
@@ -156,7 +166,6 @@ class AnimatedSprite(pygame.sprite.Sprite):
     def update(self):
         self.cur_frame = (self.cur_frame + 1) % len(self.frames)
         self.image = self.frames[self.cur_frame]
-        self.image = pygame.transform.scale(self.image, (100, 100))
 
 
 class Player():
@@ -390,9 +399,9 @@ class Item:
 class Fumo(pygame.sprite.Sprite):
     image_e = load_image("e.png")
     image_e = pygame.transform.scale(image_e, (40, 40))
-    def __init__(self, position, image, name, *groups):
+    def __init__(self, position, image, name, sound, *groups):
         super().__init__(*groups)
-        self.sound = pygame.mixer.Sound('data/baka.wav')
+        self.sound = pygame.mixer.Sound(sound)
         self.position = position
         self.sprite_fumo = image
         self.sprite = self.sprite_fumo.image
@@ -408,6 +417,7 @@ class Fumo(pygame.sprite.Sprite):
     def draw(self):
         self.sprite_fumo.update()
         self.sprite = self.sprite_fumo.image
+        self.sprite = pygame.transform.scale(self.sprite, (100, 100))
         self.rect = self.sprite.get_rect()
         self.rect.center = self.position
         screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
@@ -424,6 +434,7 @@ class Fumo(pygame.sprite.Sprite):
 
     def sound(self):
         self.sound.play()
+
 
 cells = [Cell(x, y, 'inventory') for x, y in inventory_positions] + \
         [Cell(x, y, 'armor') for x, y in armor_positions] + \
@@ -443,7 +454,7 @@ gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_
 medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
 fumo = AnimatedSprite(load_image("fumo.png"), 11, 1, 50, 50)
-fumo = Fumo(position=(200, 400), image=fumo, name="fumo")
+fumo = Fumo(position=(200, 400), image=fumo, name="fumo", sound="data/baka.wav")
 
 x, y = 200, 200
 for box in range(5):
@@ -487,7 +498,6 @@ inventory_open = False
 running = True
 dragging_item = None
 original_cell = None
-
 
 #запуск игры
 while running:
@@ -533,19 +543,41 @@ while running:
         if event.type == pygame.KEYDOWN: #как мне гидры поюзать
             if event.key == pygame.K_e:
                 for obj in objects_group:
-                    if obj.use_me:
+                    if obj.use_me and type(obj) != Fumo:
                         obj.kill()
                         for j in player.inventory:
                            if j == None:
                                player.inventory[player.inventory.index(None)] = obj
                                break
                     if obj.use_me and type(obj) == Fumo:
+                        obj.kill()
                         obj.sound.play()
 
     camera_x = player.rect.x - WIDTH // 2 + 100 // 2
     camera_y = player.rect.y - HEIGHT // 2 + 100 // 2
 
-    screen.fill(WHITE)
+    # Обновление времени суток
+    current_time += clock.get_time()
+    if current_time >= time_of_day[current_phase]["length"]:
+        # Переход к следующей фазе
+        if current_phase == "morning":
+            current_phase = "day"
+        elif current_phase == "day":
+            current_phase = "evening"
+        elif current_phase == "evening":
+            current_phase = "night"
+        elif current_phase == "night":
+            current_phase = "morning"
+        current_time = 0
+
+    phase_data = time_of_day[current_phase]
+    progress = current_time / phase_data["length"]  # Прогресс текущей фазы (от 0 до 1)
+    alpha = phase_data["start_alpha"] + (phase_data["end_alpha"] - phase_data["start_alpha"]) * progress
+
+    # Создание затемняющего слоя
+    dark_surface = pygame.Surface((WIDTH, HEIGHT))
+    dark_surface.fill(BLACK)
+    dark_surface.set_alpha(alpha)  # Установка прозрачности  # Наложение слоя
 
     screen.blit(map, (-camera_x, -camera_y))
     
@@ -566,6 +598,8 @@ while running:
 
     player.draw()
 
+    screen.blit(dark_surface, (0, 0))
+    
     if inventory_open:
         # Отображаем инвентарь
         screen.blit(inventor_image, (center_x, center_y))
