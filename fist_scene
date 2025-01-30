@@ -41,6 +41,7 @@ def cutscene(screen, images, click_sounds, background_music, texts):
             if event.type == pygame.MOUSEBUTTONDOWN:  # Проверка нажатия мыши
                 music = click_sounds[current_image_index]
                 music.play()  # Воспроизведение соответствующего звука
+                (click_sounds[current_image_index - 1]).stop()
                 current_image_index += 1
                 if current_image_index >= len(images):
                     music.stop()
@@ -82,8 +83,8 @@ def main():
                    "завещание.png", "завещание.png"]
     images = load_images(image_paths, screen_width, screen_height)
 
-    sound_paths = ["звуки шагов.mp3", "door-bell.mp3", "open door.mp3", "шелест бумаги.mp3", "фоновая 1 кат сцена.mp3",
-                   "фоновая 1 кат сцена.mp3", "фоновая 1 кат сцена.mp3", "фоновая 1 кат сцена.mp3", "фоновая 1 кат сцена.mp3"]
+    sound_paths = ["звуки шагов.mp3", "door-bell.mp3", "open door.mp3", "шелест бумаги.mp3", "шелест бумаги.mp3",
+                   "шелест бумаги.mp3", "фоновая 1 кат сцена.mp3", "шелест бумаги.mp3", "фоновая 1 кат сцена.mp3"]
     click_sounds = load_sounds(sound_paths)
 
     background_music = pygame.mixer.Sound("фоновая 1 кат сцена.mp3")  # Фоновая музыка
