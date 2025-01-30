@@ -4,6 +4,20 @@ import os
 import sys
 import random
 from settings import *
+from PIL import Image
+
+
+def split_animated_gif(gif_file_path):
+    ret = []
+    gif = Image.open(gif_file_path)
+    for frame_index in range(gif.n_frames):
+        gif.seek(frame_index)
+        frame_rgba = gif.convert("RGBA")
+        pygame_image = pygame.image.fromstring(
+            frame_rgba.tobytes(), frame_rgba.size, frame_rgba.mode
+        )
+        ret.append(pygame_image)
+    return ret
 
 #создание игры
 HIT_CLOCK = 400
@@ -123,7 +137,7 @@ class Bullet(pygame.sprite.Sprite):
 #анимация
 class AnimatedSprite(pygame.sprite.Sprite):
     def __init__(self, sheet, columns, rows, x, y):
-        super().__init__(all_sprites)
+        super().__init__()
         self.frames = []
         self.cut_sheet(sheet, columns, rows)
         self.cur_frame = 0
@@ -142,6 +156,7 @@ class AnimatedSprite(pygame.sprite.Sprite):
     def update(self):
         self.cur_frame = (self.cur_frame + 1) % len(self.frames)
         self.image = self.frames[self.cur_frame]
+        self.image = pygame.transform.scale(self.image, (100, 100))
 
 
 class Player():
@@ -213,7 +228,7 @@ class Player():
         self.border()
 
         for box in boxs_group:
-            if self.rect.colliderect(box.rect):
+            if self.rect.colliderect(box.rect) and box.hp > 0:
                 self.rect.center = original_position
 
         for enemy in enemy_group:
@@ -242,22 +257,34 @@ class Player():
 
 class Barrier(pygame.sprite.Sprite):
     """констурктор препятствий"""
-    image = load_image("box.png")
-    image = pygame.transform.scale(image, (80, 80))
-    def __init__(self, position, *group):
+    def __init__(self, position, image, image_update, *group):
         super().__init__(*group)
-        self.sprite = Barrier.image
+        image = load_image(image)
+        image = pygame.transform.scale(image, (80, 80))
+        self.sprite = image
         self.rect = self.sprite.get_rect()
         self.rect.inflate_ip(-20, -20)
+
+        image_update = load_image(image_update)
+        image_update = pygame.transform.scale(image_update, (80, 80))
+        self.sprite_update = image_update
+        self.rect_update = self.sprite_update.get_rect()
+
         self.rect.center = position
+        self.rect_update.center = position
+
         self.hp = 20
+        self.destroy = False
 
     def update(self):   
         if self.hp <= 0:
-            self.kill()
+            self.destroy = True
 
     def draw(self):
-        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
+        if self.destroy:
+            screen.blit(self.sprite_update, (self.rect_update.x - camera_x, self.rect_update.y - camera_y))
+        else:
+            screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -360,6 +387,44 @@ class Item:
         screen.blit(self.image, self.rect)
 
 
+class Fumo(pygame.sprite.Sprite):
+    image_e = load_image("e.png")
+    image_e = pygame.transform.scale(image_e, (40, 40))
+    def __init__(self, position, image, name, *groups):
+        super().__init__(*groups)
+        self.sound = pygame.mixer.Sound('data/baka.wav')
+        self.position = position
+        self.sprite_fumo = image
+        self.sprite = self.sprite_fumo.image
+        self.rect = self.sprite.get_rect()
+        self.rect.center = self.position
+        self.sprite_e = Fumo.image_e
+        self.rect_e = self.sprite_e.get_rect()
+        self.rect_e.center = self.position
+
+        self.use_me = False
+        self.name = name
+
+    def draw(self):
+        self.sprite_fumo.update()
+        self.sprite = self.sprite_fumo.image
+        self.rect = self.sprite.get_rect()
+        self.rect.center = self.position
+        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
+
+    def use(self):
+        if (player.rect.x > self.rect.x - 50 and player.rect.y > self.rect.y - 50) and (player.rect.x < self.rect.x + 50 and player.rect.y < self.rect.y + 50):
+            screen.blit(self.sprite_e, (self.rect_e.x - camera_x, self.rect_e.y - camera_y - 40))
+            self.use_me = True
+        else:
+            self.use_me = False
+
+    def update(self):
+        self.use()
+
+    def sound(self):
+        self.sound.play()
+
 cells = [Cell(x, y, 'inventory') for x, y in inventory_positions] + \
         [Cell(x, y, 'armor') for x, y in armor_positions] + \
         [Cell(x, y, 'weapon') for x, y in weapon_positions]
@@ -377,11 +442,14 @@ mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяуш�
 gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15, damage=50)
 medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
+fumo = AnimatedSprite(load_image("fumo.png"), 11, 1, 50, 50)
+fumo = Fumo(position=(200, 400), image=fumo, name="fumo")
+
 x, y = 200, 200
 for box in range(5):
     x += 100
     cords = x, y
-    box = Barrier(position=cords)
+    box = Barrier(position=cords, image="box.png", image_update="wreckage.png")
     boxs_group.add(box)
 
 objects_group.add(medkit)
@@ -389,6 +457,7 @@ objects_group.add(mka)
 objects_group.add(gun)
 objects_group.add(clips)
 enemy_group.add(enemy)
+objects_group.add(fumo)
 
 inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
@@ -470,6 +539,8 @@ while running:
                            if j == None:
                                player.inventory[player.inventory.index(None)] = obj
                                break
+                    if obj.use_me and type(obj) == Fumo:
+                        obj.sound.play()
 
     camera_x = player.rect.x - WIDTH // 2 + 100 // 2
     camera_y = player.rect.y - HEIGHT // 2 + 100 // 2
