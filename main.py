@@ -643,6 +643,7 @@ while running:
     dark_surface.fill(BLACK)
     dark_surface.set_alpha(alpha)  # Установка прозрачности  # Наложение слоя
 
+    screen.fill(WHITE)
     screen.blit(map, (-camera_x, -camera_y))
     
     #заргузка ассетов
