@@ -18,9 +18,9 @@ font = pygame.font.SysFont('serif', 50)
 
 # Настройки времени суток
 time_of_day = {
-    "morning": {"length": 10000, "start_alpha": 210, "end_alpha": 128},  # Утро (5 секунд)
-    "day": {"length": 10000, "start_alpha": 128, "end_alpha": 0},  # День (10 секунд)
-    "evening": {"length": 1000, "start_alpha": 0, "end_alpha": 128},  # Вечер (5 секунд)
+    "morning": {"length": 10000, "start_alpha": 210, "end_alpha": 128},  # Утро (10 секунд)
+    "day": {"length": 100000, "start_alpha": 128, "end_alpha": 0},  # День (10 секунд)
+    "evening": {"length": 10000, "start_alpha": 0, "end_alpha": 128},  # Вечер (10 секунд)
     "night": {"length": 10000, "start_alpha": 128, "end_alpha": 210},  # Ночь (10 секунд)
 }
 current_time = 0  # Текущее время в текущей фазе
@@ -178,48 +178,31 @@ class AnimatedSprite(pygame.sprite.Sprite):
         self.image = self.frames[self.cur_frame]
 
 
-screen_rect = (0, 0, WIDTH, HEIGHT)
+class BloodParticle(pygame.sprite.Sprite):
+    """констурктор препятствий"""
+    def __init__(self, position, image, *group):
+        super().__init__(*group)
+        image = load_image(image)
+        image = pygame.transform.scale(image, (20, 20))
+        self.sprite = image
+        self.rect = self.sprite.get_rect()
+        self.rect.inflate_ip(-20, -20)
+        self.rect.center = position
 
-
-class Particle(pygame.sprite.Sprite):
-    """класс частиц"""
-    # сгенерируем частицы разного размера
-    fire = [load_image("blood.png")]
-    for scale in (5, 10, 20):
-        fire.append(pygame.transform.scale(fire[0], (scale, scale)))
-
-    def __init__(self, pos, dx, dy):
-        super().__init__(all_sprites)
-        self.image = random.choice(self.fire)
-        self.rect = self.image.get_rect()
-
-        # у каждой частицы своя скорость — это вектор
-        self.velocity = [dx, dy]
-        # и свои координаты
-        self.rect.x, self.rect.y = pos
-
-        # гравитация будет одинаковой (значение константы)
-        self.gravity = GRAVITY
+        self.lifetime = random.randint(10, 20)  # Время жизни в кадрах
+        self.angle = random.uniform(0, 2 * math.pi)  # Направление движения
+        self.speed = random.uniform(1, 3)  # Скорость движения
 
     def update(self):
-        # применяем гравитационный эффект: 
-        # движение с ускорением под действием гравитации
-        self.velocity[1] += self.gravity
-        # перемещаем частицу
-        self.rect.x += self.velocity[0]
-        self.rect.y += self.velocity[1]
-        # убиваем, если частица ушла за экран
-        if not self.rect.colliderect(screen_rect):
+        # Движение частицы
+        self.rect.x += math.cos(self.angle) * self.speed
+        self.rect.y += math.sin(self.angle) * self.speed
+        self.lifetime -= 1
+        if self.lifetime == 0:
             self.kill()
-
-#ф-ция создания частиц
-def create_particles(position):
-    # количество создаваемых частиц
-    particle_count = 20
-    # возможные скорости
-    numbers = range(-5, 6)
-    for _ in range(particle_count):
-        Particle(position, random.choice(numbers), random.choice(numbers))
+        
+    def draw(self):
+        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
 
 
 class Player():
@@ -393,7 +376,11 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.y += self.speed_y
 
         for box in boxs_group:
-            if self.rect.colliderect(box.rect):
+            if self.rect.colliderect(box.rect) and box.hp > 0:
+                self.rect.center = original_position
+
+        for barrier in barrier_group:
+            if self.rect.colliderect(barrier.rect):
                 self.rect.center = original_position
 
         if self.rect.colliderect(player) and self.hp > 0:
@@ -401,11 +388,11 @@ class Enemy(pygame.sprite.Sprite):
             self.rect.center = original_position
             if time_now > player.player_hit_clock:
                 player.hp = player.hp - 10
-                print(self.hp)
-                print('hit')
                 player.player_hit_clock = time_now + HIT_CLOCK
-            else:
-                print('player hit cooldown')
+                # Создание частиц крови
+                for _ in range(20):  # Создаем 20 частиц
+                    blood_particles.add(BloodParticle(image="blood.png", position=player.rect.center))
+
 
         for bullets in bullet_group:
             if self.rect.colliderect(bullet) and self.hp >= 0:
@@ -514,6 +501,7 @@ boxs_group = pygame.sprite.Group()
 enemy_group = pygame.sprite.Group()
 objects_group = pygame.sprite.Group()
 barrier_group = pygame.sprite.Group()
+blood_particles = pygame.sprite.Group()
 
 #экземпляры класса
 player = Player(image="player.png", position=(400, 400))
@@ -538,7 +526,6 @@ for _ in range(5):
     cords = x, y
     box = Box(position=cords, image="box.png", image_update="wreckage.png")
     boxs_group.add(box)
-    print("box")
 
 objects_group.add(medkit)
 objects_group.add(mka)
@@ -661,20 +648,23 @@ while running:
     #заргузка ассетов
     player.move()
     player.angle_finder(pygame.mouse.get_pos())
-
-    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
     
     custom_draw(bullet_group)
     bullet_group.update()
 
-    custom_draw(boxs_group)
-    boxs_group.update()
-
     custom_draw(objects_group)
     objects_group.update()
 
+    custom_draw(boxs_group)
+    boxs_group.update()
+
     custom_draw(barrier_group)
     barrier_group.update()
+
+    custom_draw(blood_particles)
+    blood_particles.update()
+
+    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
 
     player.draw()
 
