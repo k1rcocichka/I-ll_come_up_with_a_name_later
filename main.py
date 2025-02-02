@@ -506,7 +506,7 @@ blood_particles = pygame.sprite.Group()
 #экземпляры класса
 player = Player(image="player.png", position=(400, 400))
 enemy = Enemy(position=(700, 450))
-mka = Wearon(position=(320, 420), image="мка.png", name="пушка-мяушка", full_clip=30, clip=30, damage=50)
+mka = Wearon(position=(320, 420), image="мка.jpg", name="пушка-мяушка", full_clip=30, clip=30, damage=50)
 gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15, damage=50)
 medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
@@ -538,7 +538,7 @@ inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
 
 #карта
-map = load_image("map1.png")
+map = load_image("map.png")
 map = pygame.transform.scale(map, (2000, 2000))
 
 armor_image = load_image("shotgun.png")
@@ -554,6 +554,7 @@ weapon_item = Item(cells[1].rect.x, cells[1].rect.y,'weapon', weapon_image)
 # Помещение предметов в ячейки
 cells[0].item = armor_item
 cells[1].item = weapon_item
+
 map_rect = map.get_rect()
 
 programIcon = load_image('icon.png')
@@ -584,7 +585,27 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_3:
                 player.inventory_cell = 2
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_3:
+                player.inventory_cell = 3
         
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_3:
+                player.inventory_cell = 4
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_3:
+                player.inventory_cell = 5
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_3:
+                player.inventory_cell = 6
+
+        if event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_3:
+                player.inventory_cell = 7
+
         if event.type == pygame.MOUSEBUTTONUP:
             if player.have_wearon() and type(player.inventory[player.inventory_cell]) == Wearon: #проверка оружия
                 if player.inventory[player.inventory_cell].full_clip > 0:
