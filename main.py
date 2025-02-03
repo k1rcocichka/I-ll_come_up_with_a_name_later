@@ -454,7 +454,7 @@ class Fumo(pygame.sprite.Sprite):
     """фумо фумо (коллекционки)"""
     image_e = load_image("e.png")
     image_e = pygame.transform.scale(image_e, (40, 40))
-    def __init__(self, position, image, name, sound, *groups):
+    def __init__(self, position, image, name, sound, num, *groups):
         super().__init__(*groups)
         self.sound = pygame.mixer.Sound(sound)
         self.position = position
@@ -468,6 +468,7 @@ class Fumo(pygame.sprite.Sprite):
 
         self.use_me = False
         self.name = name
+        self.num = num
 
     def draw(self):
         self.sprite_fumo.update()
@@ -490,6 +491,22 @@ class Fumo(pygame.sprite.Sprite):
     def sound(self):
         self.sound.play()
 
+    def save(self):
+        with open("save.txt") as file:
+            lines = file.readlines()
+        # Split the lines by '$'
+        lines_split = [line for line in lines]
+
+        lines_split[1] = lines_split[1].split()
+        lines_split[1][self.num - 1] = '1'
+        lines_split[1] = ' '.join(lines_split[1])
+
+        print(lines_split)
+
+        # Write the file
+        with open('save.txt', 'w') as file:
+            file.writelines(lines_split)
+
 
 cells = [Cell(x, y, 'inventory') for x, y in inventory_positions] + \
         [Cell(x, y, 'armor') for x, y in armor_positions] + \
@@ -511,7 +528,7 @@ gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_
 medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
 fumo = AnimatedSprite(load_image("fumo.png"), 11, 1, 50, 50)
-fumo = Fumo(position=(200, 400), image=fumo, name="fumo", sound="data/baka.wav")
+fumo = Fumo(position=(200, 400), image=fumo, name="fumo", sound="data/baka.wav", num=1)
 
 x, y = 200, 200
 for _ in range(5):
@@ -554,7 +571,6 @@ weapon_item = Item(cells[1].rect.x, cells[1].rect.y,'weapon', weapon_image)
 # Помещение предметов в ячейки
 cells[0].item = armor_item
 cells[1].item = weapon_item
-
 map_rect = map.get_rect()
 
 programIcon = load_image('icon.png')
@@ -585,27 +601,7 @@ while running:
         if event.type == pygame.KEYDOWN:
             if event.key == pygame.K_3:
                 player.inventory_cell = 2
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_3:
-                player.inventory_cell = 3
         
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_3:
-                player.inventory_cell = 4
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_3:
-                player.inventory_cell = 5
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_3:
-                player.inventory_cell = 6
-
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_3:
-                player.inventory_cell = 7
-
         if event.type == pygame.MOUSEBUTTONUP:
             if player.have_wearon() and type(player.inventory[player.inventory_cell]) == Wearon: #проверка оружия
                 if player.inventory[player.inventory_cell].full_clip > 0:
@@ -635,6 +631,7 @@ while running:
                                player.inventory[player.inventory.index(None)] = obj
                                break
                     if obj.use_me and type(obj) == Fumo:
+                        obj.save()
                         obj.kill()
                         obj.sound.play()
 
