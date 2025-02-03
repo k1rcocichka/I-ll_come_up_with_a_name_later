@@ -14,7 +14,7 @@ pygame.init()
 clock = pygame.time.Clock()
 screen = pygame.display.set_mode((HEIGHT, WIDTH))
 pygame.display.set_caption(TITLE)
-font = pygame.font.SysFont('serif', 50)
+font = pygame.font.SysFont('Bleeker Cyrillic', 60)
 
 # Настройки времени суток
 time_of_day = {
@@ -25,6 +25,27 @@ time_of_day = {
 }
 current_time = 0  # Текущее время в текущей фазе
 current_phase = "morning"  # Текущая фаза времени суток
+
+
+def indicator():
+    screen.blit(player.hp_bar, (0, 350))
+    lost_hp = pygame.draw.rect(screen, 'grey', (40, 388, 10, 190 - player.hp))
+    lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190 - player.stamina))
+
+    if player.have_wearon():
+            text = f"{player.inventory[player.inventory_cell].clip}/{player.inventory[player.inventory_cell].full_clip}"
+            text = font.render(text, True, (0, 0, 0))
+            screen.blit(text, (450, 520))
+
+    if type(player.inventory[player.inventory_cell]) == Medkit:
+        text = f"{player.inventory[player.inventory_cell].use_medkit}"
+        text = font.render(text, True, (0, 0, 0))
+        screen.blit(text, (450, 520))
+
+    if type(player.inventory[player.inventory_cell]) == ClipsWearon:
+        text = f"{player.inventory[player.inventory_cell].use_clips}"
+        text = font.render(text, True, (0, 0, 0))
+        screen.blit(text, (450, 520))
 
 #тут загрузка картинок
 def load_image(name, colorkey=None):
@@ -237,33 +258,10 @@ class Player():
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
-        rotate_image = pygame.transform.rotate(self.sprite, self.angle)
-        rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
-        screen.blit(self.hp_bar, (0, 350))
-
-        if self.have_wearon():
-            text = f"{self.inventory[self.inventory_cell].clip}/{self.inventory[self.inventory_cell].full_clip}"
-            text = font.render(text, True, (0, 0, 0))
-            screen.blit(text, (450, 520))
-
-        if type(self.inventory[self.inventory_cell]) == Medkit:
-            text = f"{self.inventory[self.inventory_cell].use_medkit}"
-            text = font.render(text, True, (0, 0, 0))
-            screen.blit(text, (450, 520))
-
-        if type(self.inventory[self.inventory_cell]) == ClipsWearon:
-            text = f"{self.inventory[self.inventory_cell].use_clips}"
-            text = font.render(text, True, (0, 0, 0))
-            screen.blit(text, (450, 520))
 
         if DISPLAY_iNVENTORY:
             screen.blit(self.inventory_sprite, (0, 0))
 
-        lost_hp = pygame.draw.rect(screen, 'grey', (40, 388, 10, 190 - self.hp))
-        lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190 - self.stamina))
-
-    
     """движения"""
     def move(self):
         original_position = self.rect.center
@@ -282,7 +280,6 @@ class Player():
             if time_now > self.player_sprint_clock:
                 self.player_sprint_clock = time_now + 1
                 self.stamina -= 1
-                print(self.stamina)
             if self.stamina > 20:
                 self.speed_x = 4
                 self.speed_y = 4
@@ -291,7 +288,6 @@ class Player():
             if time_now > self.player_sprint_clock and self.stamina < 190:
                 self.player_sprint_clock = time_now + 20
                 self.stamina += 1
-                print(self.stamina)
             self.speed_x = 2
             self.speed_y = 2
         self.border()
@@ -403,6 +399,8 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.inflate_ip(-50, -50)
         self.mask = pygame.mask.from_surface(self.sprite)
 
+        self.can_move = True
+        self.enemy_tick = 0
         self.rect.center = position
         self.speed_x_ = 3
         self.speed_y_ = 3
@@ -415,7 +413,14 @@ class Enemy(pygame.sprite.Sprite):
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
-        if self.hp < 0:
+
+        fill = (self.hp / 100) * 60
+        
+        bar_hp = pygame.draw.rect(screen, LIGHTRED, (rotate_rect.x - camera_x + 30, rotate_rect.y - camera_y, 60, 10))
+        lost_hp = pygame.draw.rect(screen, LIGHTGREEN, (rotate_rect.x - camera_x + 30, rotate_rect.y - camera_y, fill, 10))
+        outline = pygame.draw.rect(screen, LIGHTGREY, (rotate_rect.x - camera_x + 30, rotate_rect.y - camera_y, 60, 10), 2)
+        
+        if self.hp <= 0:
             self.kill()
 
     def move(self):
@@ -442,7 +447,6 @@ class Enemy(pygame.sprite.Sprite):
                 for _ in range(20):  # Создаем 20 частиц
                     blood_particles.add(BloodParticle(image="blood.png", position=player.rect.center))
 
-
         for bullets in bullet_group:
             if self.rect.colliderect(bullet) and self.hp >= 0:
                 self.hp = self.hp - player.inventory[player.inventory_cell].damage
@@ -468,8 +472,20 @@ class Enemy(pygame.sprite.Sprite):
             self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
             self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
         else:
-            self.speed_x = 0
-            self.speed_y = 0
+            self.enemy_tick += 1
+            if self.enemy_tick >= 300:
+                self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
+                self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
+                if self.can_move:
+                    self.angle = random.randint(-180, 180)
+                    self.can_move = False
+                    print(self.enemy_tick)
+                if self.enemy_tick >= 330:
+                    self.enemy_tick = 0
+                    self.can_move = True
+            else:
+                self.speed_x = 0
+                self.speed_y = 0
         self.move()
 
 
@@ -575,8 +591,8 @@ blood_particles = pygame.sprite.Group()
 #экземпляры класса
 player = Player(image="player.png", position=(400, 400))
 enemy = Enemy(position=(700, 450))
-mka = Wearon(position=(320, 420), image="мка.jpg", name="пушка-мяушка", full_clip=30, clip=30, damage=50)
-gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15, damage=50)
+mka = Wearon(position=(320, 420), image="мка.jpg", name="пушка-мяушка", full_clip=30, clip=30, damage=10)
+gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15, damage=10)
 medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
 fumo = AnimatedSprite(load_image("fumo.png"), 11, 1, 50, 50)
@@ -730,6 +746,8 @@ while running:
 
     enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
 
+    player.draw()
+
     custom_draw(boxs_group)
     boxs_group.update()
 
@@ -739,9 +757,7 @@ while running:
     custom_draw(blood_particles)
     blood_particles.update()
 
-    player.draw()
-
-
+    indicator()
     screen.blit(dark_surface, (0, 0))
     
     if inventory_open:
