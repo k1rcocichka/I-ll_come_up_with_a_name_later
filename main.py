@@ -213,13 +213,16 @@ class Player():
         self.rect.inflate_ip(-50, -50)
         self.mask = pygame.mask.from_surface(self.sprite)
 
+        self.run = False
         self.inventory_cell = 0
         self.rect.center = position
         self.speed_x = 2
         self.speed_y = 2
         self.angle = 0
         self.hp = 190
+        self.stamina = 190
         self.player_hit_clock = 0
+        self.player_sprint_clock = 0
         self.inventory = [None, None, None]
 
         self.inventory_sprite = load_image("inventory.png")
@@ -258,7 +261,7 @@ class Player():
             screen.blit(self.inventory_sprite, (0, 0))
 
         lost_hp = pygame.draw.rect(screen, 'grey', (40, 388, 10, 190 - self.hp))
-        lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190))
+        lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190 - self.stamina))
 
     
     """движения"""
@@ -274,6 +277,23 @@ class Player():
             self.rect.x -= self.speed_x
         if key[pygame.K_d]:
             self.rect.x += self.speed_x
+        if key[pygame.K_LSHIFT] and self.stamina > 0:
+            time_now = pygame.time.get_ticks()
+            if time_now > self.player_sprint_clock:
+                self.player_sprint_clock = time_now + 1
+                self.stamina -= 1
+                print(self.stamina)
+            if self.stamina > 20:
+                self.speed_x = 4
+                self.speed_y = 4
+        else:
+            time_now = pygame.time.get_ticks()
+            if time_now > self.player_sprint_clock and self.stamina < 190:
+                self.player_sprint_clock = time_now + 20
+                self.stamina += 1
+                print(self.stamina)
+            self.speed_x = 2
+            self.speed_y = 2
         self.border()
 
         for box in boxs_group:
@@ -324,8 +344,9 @@ class Barrier(pygame.sprite.Sprite):
 
 
 class Light(Barrier):
-    def __init__(self, position, image, radius, intensity, *group):
+    def __init__(self, position, image, radius, intensity, switch, *group):
         super().__init__(position, image, *group)
+        self.switch = switch
         self.position = position
         self.radius = radius
         self.intensity = intensity
@@ -343,7 +364,7 @@ class Light(Barrier):
     def draw(self):
         """Отрисовывает источник света на экране."""
         screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
-        if current_phase != "day":
+        if current_phase != "day" and self.switch:
             screen.blit(self.light_surface, (self.position[0] - self.radius - camera_x, self.position[1] - self.radius - camera_y))
 
 
@@ -560,7 +581,7 @@ medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", 
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
 fumo = AnimatedSprite(load_image("fumo.png"), 11, 1, 50, 50)
 fumo = Fumo(position=(200, 400), image=fumo, name="fumo", sound="data/baka.wav", num=1)
-light = Light(position=(400, 460), image="box.png", radius=200, intensity=200)
+light = Light(position=(400, 460), image="lamp.png", radius=300, intensity=240, switch=True)
 
 x, y = 200, 200
 for _ in range(5):
@@ -707,6 +728,8 @@ while running:
     custom_draw(objects_group)
     objects_group.update()
 
+    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
+
     custom_draw(boxs_group)
     boxs_group.update()
 
@@ -718,9 +741,6 @@ while running:
 
     player.draw()
 
-    
-
-    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
 
     screen.blit(dark_surface, (0, 0))
     
