@@ -60,6 +60,26 @@ def custom_draw(group):
         sprite.draw()
 
 
+def indicators():
+    if player.have_wearon():
+        text = f"{player.inventory[player.inventory_cell].clip}/{player.inventory[player.inventory_cell].full_clip}"
+        text = font.render(text, True, (0, 0, 0))
+        screen.blit(text, (450, 520))
+    if type(player.inventory[player.inventory_cell]) == Medkit:
+        text = f"{player.inventory[player.inventory_cell].use_medkit}"
+        text = font.render(text, True, (0, 0, 0))
+        screen.blit(text, (450, 520))
+    if type(player.inventory[player.inventory_cell]) == ClipsWearon:
+        text = f"{player.inventory[player.inventory_cell].use_clips}"
+        text = font.render(text, True, (0, 0, 0))
+        screen.blit(text, (450, 520))
+    if DISPLAY_iNVENTORY:
+        screen.blit(player.inventory_sprite, (0, 0))
+    lost_hp = pygame.draw.rect(screen, 'grey', (40, 388, 10, 190 - player.hp))
+    lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190))
+    screen.blit(player.hp_bar, (0, 350))
+
+
 class Object(pygame.sprite.Sprite):
     """класс объктов"""
     image_e = load_image("e.png")
@@ -140,7 +160,6 @@ class Bullet(pygame.sprite.Sprite):
         for box in boxs_group:
             if self.rect.colliderect(box.rect) and box.hp > 0:
                 box.hp = box.hp - 10
-                print(box.hp)
                 self.kill()
 
         for barrier in barrier_group:
@@ -235,28 +254,7 @@ class Player():
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
-        screen.blit(self.hp_bar, (0, 350))
-        
-        if self.have_wearon():
-            text = f"{self.inventory[self.inventory_cell].clip}/{self.inventory[self.inventory_cell].full_clip}"
-            text = font.render(text, True, (0, 0, 0))
-            screen.blit(text, (450, 520))
 
-        if type(self.inventory[self.inventory_cell]) == Medkit:
-            text = f"{self.inventory[self.inventory_cell].use_medkit}"
-            text = font.render(text, True, (0, 0, 0))
-            screen.blit(text, (450, 520))
-
-        if type(self.inventory[self.inventory_cell]) == ClipsWearon:
-            text = f"{self.inventory[self.inventory_cell].use_clips}"
-            text = font.render(text, True, (0, 0, 0))
-            screen.blit(text, (450, 520))
-
-        if DISPLAY_iNVENTORY:
-            screen.blit(self.inventory_sprite, (0, 0))
-
-        lost_hp = pygame.draw.rect(screen, 'grey', (40, 388, 10, 190 - self.hp))
-        lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190))
     
     """движения"""
     def move(self):
@@ -320,6 +318,30 @@ class Barrier(pygame.sprite.Sprite):
         screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
 
 
+class Light(Barrier):
+    def __init__(self, position, image, radius, intensity, *group):
+        super().__init__(position, image, *group)
+        self.position = position
+        self.radius = radius
+        self.intensity = intensity
+        self.light_surface = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+        self.create_light()
+
+    def create_light(self):
+        """Создает поверхность с градиентным освещением."""
+        for i in range(self.radius, 0, -1):
+            alpha = int(self.intensity * (1 - i / self.radius))
+            if alpha < 0:
+                alpha = 0
+            pygame.draw.circle(self.light_surface, (255, 255, 255, alpha), (self.radius, self.radius), i)
+
+    def draw(self):
+        """Отрисовывает источник света на экране."""
+        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
+        if current_phase != "day":
+            screen.blit(self.light_surface, (self.position[0] - self.radius - camera_x, self.position[1] - self.radius - camera_y))
+
+
 class Box(Barrier):
     """класс лут боксов"""
     def __init__(self, position, image, image_update, *group):
@@ -366,8 +388,9 @@ class Enemy(pygame.sprite.Sprite):
         self.target(target_pos)
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        if self.hp > 0:
-            screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
+        screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
+        if self.hp < 0:
+            self.kill()
 
     def move(self):
         """логику позже"""
@@ -397,6 +420,9 @@ class Enemy(pygame.sprite.Sprite):
         for bullets in bullet_group:
             if self.rect.colliderect(bullet) and self.hp >= 0:
                 self.hp = self.hp - player.inventory[player.inventory_cell].damage
+                # Создание частиц крови
+                for _ in range(20):  # Создаем 20 частиц
+                    blood_particles.add(BloodParticle(image="blood.png", position=self.rect.center))
                 bullet.kill()
 
     def border(self):
@@ -529,6 +555,7 @@ medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", 
 clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
 fumo = AnimatedSprite(load_image("fumo.png"), 11, 1, 50, 50)
 fumo = Fumo(position=(200, 400), image=fumo, name="fumo", sound="data/baka.wav", num=1)
+light = Light(position=(400, 460), image="box.png", radius=200, intensity=200)
 
 x, y = 200, 200
 for _ in range(5):
@@ -544,6 +571,7 @@ for _ in range(5):
     box = Box(position=cords, image="box.png", image_update="wreckage.png")
     boxs_group.add(box)
 
+barrier_group.add(light)
 objects_group.add(medkit)
 objects_group.add(mka)
 objects_group.add(gun)
@@ -683,11 +711,13 @@ while running:
     custom_draw(blood_particles)
     blood_particles.update()
 
-    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
-
     player.draw()
 
+    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
+
     screen.blit(dark_surface, (0, 0))
+
+    indicators()
     
     if inventory_open:
         # Отображаем инвентарь
