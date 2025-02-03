@@ -58,27 +58,7 @@ def split_animated_gif(gif_file_path):
 def custom_draw(group):
     for sprite in group:
         sprite.draw()
-
-
-def indicators():
-    if player.have_wearon():
-        text = f"{player.inventory[player.inventory_cell].clip}/{player.inventory[player.inventory_cell].full_clip}"
-        text = font.render(text, True, (0, 0, 0))
-        screen.blit(text, (450, 520))
-    if type(player.inventory[player.inventory_cell]) == Medkit:
-        text = f"{player.inventory[player.inventory_cell].use_medkit}"
-        text = font.render(text, True, (0, 0, 0))
-        screen.blit(text, (450, 520))
-    if type(player.inventory[player.inventory_cell]) == ClipsWearon:
-        text = f"{player.inventory[player.inventory_cell].use_clips}"
-        text = font.render(text, True, (0, 0, 0))
-        screen.blit(text, (450, 520))
-    if DISPLAY_iNVENTORY:
-        screen.blit(player.inventory_sprite, (0, 0))
-    lost_hp = pygame.draw.rect(screen, 'grey', (40, 388, 10, 190 - player.hp))
-    lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190))
-    screen.blit(player.hp_bar, (0, 350))
-
+    
 
 class Object(pygame.sprite.Sprite):
     """класс объктов"""
@@ -254,6 +234,31 @@ class Player():
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
         screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
+        rotate_image = pygame.transform.rotate(self.sprite, self.angle)
+        rotate_rect = rotate_image.get_rect(center=self.rect.center)
+        screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
+        screen.blit(self.hp_bar, (0, 350))
+
+        if self.have_wearon():
+            text = f"{self.inventory[self.inventory_cell].clip}/{self.inventory[self.inventory_cell].full_clip}"
+            text = font.render(text, True, (0, 0, 0))
+            screen.blit(text, (450, 520))
+
+        if type(self.inventory[self.inventory_cell]) == Medkit:
+            text = f"{self.inventory[self.inventory_cell].use_medkit}"
+            text = font.render(text, True, (0, 0, 0))
+            screen.blit(text, (450, 520))
+
+        if type(self.inventory[self.inventory_cell]) == ClipsWearon:
+            text = f"{self.inventory[self.inventory_cell].use_clips}"
+            text = font.render(text, True, (0, 0, 0))
+            screen.blit(text, (450, 520))
+
+        if DISPLAY_iNVENTORY:
+            screen.blit(self.inventory_sprite, (0, 0))
+
+        lost_hp = pygame.draw.rect(screen, 'grey', (40, 388, 10, 190 - self.hp))
+        lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190))
 
     
     """движения"""
@@ -713,11 +718,11 @@ while running:
 
     player.draw()
 
+    
+
     enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
 
     screen.blit(dark_surface, (0, 0))
-
-    indicators()
     
     if inventory_open:
         # Отображаем инвентарь
