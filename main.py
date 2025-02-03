@@ -738,18 +738,18 @@ while running:
     player.move()
     player.angle_finder(pygame.mouse.get_pos())
     
-    custom_draw(bullet_group)
-    bullet_group.update()
-
     custom_draw(objects_group)
     objects_group.update()
 
     enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
 
-    player.draw()
-
     custom_draw(boxs_group)
     boxs_group.update()
+
+    custom_draw(bullet_group)
+    bullet_group.update()
+
+    player.draw()
 
     custom_draw(barrier_group)
     barrier_group.update()
