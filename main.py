@@ -406,6 +406,7 @@ class Enemy(pygame.sprite.Sprite):
         self.speed_y_ = 3
         self.angle = 0
         self.hp = 100
+        self.detection_radius = 200
 
     def update(self, target, target_pos):
         """рисуем врага"""
@@ -467,7 +468,14 @@ class Enemy(pygame.sprite.Sprite):
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
     def target(self, target_pos):
-        if (player.rect.x > self.rect.x - 250 and player.rect.y > self.rect.y - 250) and (player.rect.x < self.rect.x + 250 and player.rect.y < self.rect.y + 250):
+        radius_surface = pygame.Surface((self.detection_radius * 2, self.detection_radius * 2), pygame.SRCALPHA)
+        radius = pygame.draw.circle(radius_surface, (255, 0, 0, 50), (self.detection_radius, self.detection_radius), self.detection_radius)
+        screen.blit(radius_surface, (self.rect.centerx - self.detection_radius - camera_x, self.rect.centery - self.detection_radius - camera_y))
+        distance_to_player = math.hypot(
+            player.rect.centerx - self.rect.centerx,
+            player.rect.centery - self.rect.centery
+        )
+        if distance_to_player <= self.detection_radius:
             self.angle_finder(target_pos)
             self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
             self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
