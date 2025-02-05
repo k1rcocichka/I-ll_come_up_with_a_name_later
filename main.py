@@ -6,6 +6,67 @@ import random
 from settings import *
 from PIL import Image
 
+#загрузка лвлов
+level_1_data = {
+    "enemies": [
+        {"position": (700, 450)}
+    ],
+    "barriers": [
+        {"position": (300, 200), "image": "box.png"},
+        {"position": (400, 200), "image": "box.png"},
+        {"position": (500, 200), "image": "box.png"}
+    ],
+    "boxs": [
+        {"position": (300, 600), "image": "box.png", "image_update": "wreckage.png"},
+        {"position": (400, 600), "image": "box.png", "image_update": "wreckage.png"},
+        {"position": (500, 600), "image": "box.png", "image_update": "wreckage.png"},
+    ],
+    "lights": [
+        {
+            "position": (600, 450),
+            "image": "box.png",
+            "radius": 200,
+            "intensity": 250,
+            "switch": True
+        }
+        #position, image, radius, intensity, switch
+    ],
+    "objects": [
+        {
+            "type": "weapon",
+            "position": (320, 420),
+            "image": "мка.jpg",
+            "name": "пушка-мяушка",
+            "full_clip": 30,
+            "clip": 30,
+            "damage": 10
+        },
+        {
+            "type": "medkit",
+            "position": (320, 460),
+            "image": "medkit.png",
+            "use_medkit": 3,
+            "name": "аптечка"
+        },
+        {
+            "type": "clips",
+            "position": (320, 500),
+            "image": "clips.png",
+            "clips_many": 10,
+            "use_clips": 3,
+            "name": "патроны"
+        },
+        {
+            "type": "fumo",
+            "position": (200, 400),
+            "image": "fumo.gif",
+            "name": "fumo",
+            "sound": "data/baka.wav",
+            "num": 1
+        }
+    ]
+}
+
 #создание игры
 HIT_CLOCK = 400
 
@@ -148,13 +209,17 @@ class Bullet(pygame.sprite.Sprite):
         if self.rect.right < 0 or self.rect.left > WIDTH + camera.camera_x or self.rect.top > HEIGHT + camera.camera_y or self.rect.bottom < 0:
             self.kill()
         
-        for box in boxs_group:
+        for box in level.boxes:
             if self.rect.colliderect(box.rect) and box.hp > 0:
                 box.hp = box.hp - 10
                 self.kill()
 
-        for barrier in barrier_group:
+        for barrier in level.barriers:
             if self.rect.colliderect(barrier.rect):
+                self.kill()
+
+        for light in level.lights:
+            if self.rect.colliderect(light.rect):
                 self.kill()
         
     def draw(self):
@@ -282,16 +347,20 @@ class Player():
             self.speed_y = 2
         self.border()
 
-        for box in boxs_group:
+        for box in level.boxes:
             if self.rect.colliderect(box.rect) and box.hp > 0:
                 self.rect.center = original_position
 
-        for barrier in barrier_group:
+        for barrier in level.barriers:
             if self.rect.colliderect(barrier.rect):
                 self.rect.center = original_position
 
-        for enemy in enemy_group:
+        for enemy in level.enemies:
             if player.rect.colliderect(enemy) and enemy.hp > 0:
+                self.rect.center = original_position
+
+        for light in level.lights:
+            if self.rect.colliderect(light.rect):
                 self.rect.center = original_position
         
     """штука для отслежки курсора"""
@@ -302,8 +371,8 @@ class Player():
 
     """ограничитель"""
     def border(self):
-        self.rect.x = max(0, min(self.rect.x, map_rect.width - self.sprite.get_height()))
-        self.rect.y = max(0, min(self.rect.y, map_rect.height - self.sprite.get_width()))
+        self.rect.x = max(0, min(self.rect.x, level.map_rect.width - self.sprite.get_height()))
+        self.rect.y = max(0, min(self.rect.y, level.map_rect.height - self.sprite.get_width()))
 
     def update(self):
         pass
@@ -350,8 +419,8 @@ class Light(Barrier):
     def draw(self):
         """Отрисовывает источник света на экране."""
         screen.blit(self.sprite, (self.rect.x - camera.camera_x, self.rect.y - camera.camera_y))
-        if alpha_.current_phase == "night" and self.switch:
-            screen.blit(self.light_surface, (self.position[0] - self.radius - camera.camera_x, self.position[1] - self.radius - camera.camera_y))
+        if alpha_.current_phase != "day" and self.switch:
+            screen.blit(self.light_surface, (self.position[0] - self.radius - camera.camera_x + 5, self.position[1] - self.radius - camera.camera_y + 5))
 
 
 class Box(Barrier):
@@ -420,12 +489,16 @@ class Enemy(pygame.sprite.Sprite):
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
 
-        for box in boxs_group:
+        for box in level.boxes:
             if self.rect.colliderect(box.rect) and box.hp > 0:
                 self.rect.center = original_position
 
-        for barrier in barrier_group:
+        for barrier in level.barriers:
             if self.rect.colliderect(barrier.rect):
+                self.rect.center = original_position
+        
+        for light in level.lights:
+            if self.rect.colliderect(light.rect):
                 self.rect.center = original_position
 
         if self.rect.colliderect(player) and self.hp > 0:
@@ -485,6 +558,9 @@ class Enemy(pygame.sprite.Sprite):
                 self.speed_x = 0
                 self.speed_y = 0
         self.move()
+
+    def draw(self):
+        pass
 
 
 class Cell:
@@ -595,8 +671,8 @@ class TimeOfDay:
         self.current_phase = "morning"
         self.current_time = 0
 
-    def update(self):
-        self.current_time += 100
+    def update(self, dt):
+        self.current_time += dt
         phase_data = self.phases[self.current_phase]
         if self.current_time >= phase_data["length"]:
             self.next_phase()
@@ -612,61 +688,147 @@ class TimeOfDay:
         phase_data = self.phases[self.current_phase]
         progress = self.current_time / phase_data["length"]
         return phase_data["start_alpha"] + (phase_data["end_alpha"] - phase_data["start_alpha"]) * progress
-    
+
+
+class Level:
+    def __init__(self, level_data, width, height, map_im):
+        """
+        Инициализация уровня.
+        :param level_data: Данные уровня (враги, барьеры, объекты и т.д.)
+        """
+        self.map = load_image(map_im)
+        self.map = pygame.transform.scale(self.map, (width, height))
+        self.map_rect = self.map.get_rect()
+
+        self.level_data = level_data
+        self.enemies = pygame.sprite.Group()
+        self.barriers = pygame.sprite.Group()
+        self.objects = pygame.sprite.Group()
+        self.boxes = pygame.sprite.Group()
+        self.lights = pygame.sprite.Group()
+        self.load_level()
+
+    def load_level(self):
+        """
+        Загрузка уровня на основе данных.
+        """
+        # Загрузка врагов
+        for enemy_data in self.level_data.get("enemies", []):
+            enemy = Enemy(position=enemy_data["position"])
+            self.enemies.add(enemy)
+
+        # Загрузка барьеров
+        for barrier_data in self.level_data.get("barriers", []):
+            barrier = Barrier(
+                position=barrier_data["position"],
+                image=barrier_data["image"]
+            )
+            self.barriers.add(barrier)
+
+        # Загрузка света
+        for light_data in self.level_data.get("lights", []):
+            light = Light(
+                position=light_data["position"],
+                image=light_data["image"],
+                radius=light_data["radius"],
+                intensity=light_data["intensity"],
+                switch=light_data["switch"]
+            )
+            self.lights.add(light)
+
+        # Загрузка боксов
+        for boxs_data in self.level_data.get("boxs", []):
+            box = Box(
+                position=boxs_data["position"],
+                image=boxs_data["image"],
+                image_update=boxs_data["image_update"]
+            )
+            self.boxes.add(box)
+
+        # Загрузка объектов
+        for object_data in self.level_data.get("objects", []):
+            if object_data["type"] == "weapon":
+                obj = Wearon(
+                    position=object_data["position"],
+                    image=object_data["image"],
+                    name=object_data["name"],
+                    full_clip=object_data["full_clip"],
+                    clip=object_data["clip"],
+                    damage=object_data["damage"]
+                )
+            elif object_data["type"] == "medkit":
+                obj = Medkit(
+                    position=object_data["position"],
+                    image=object_data["image"],
+                    use_medkit=object_data["use_medkit"],
+                    name=object_data["name"]
+                )
+            elif object_data["type"] == "clips":
+                obj = ClipsWearon(
+                    position=object_data["position"],
+                    image=object_data["image"],
+                    clips_many=object_data["clips_many"],
+                    use_clips=object_data["use_clips"],
+                    name=object_data["name"]
+                )
+            elif object_data["type"] == "fumo":
+                fumo_sprite = AnimatedSprite(
+                    load_image(object_data["image"]),
+                    columns=11,
+                    rows=1,
+                    x=50,
+                    y=50
+                )
+                obj = Fumo(
+                    position=object_data["position"],
+                    image=fumo_sprite,
+                    name=object_data["name"],
+                    sound=object_data["sound"],
+                    num=object_data["num"]
+                )
+            self.objects.add(obj)
+
+    def update(self):
+        """
+        Обновление всех объектов уровня.
+        """
+        self.enemies.update(player, (player.rect.x - camera.camera_x + 30, player.rect.y - camera.camera_y + 30))
+        self.barriers.update()
+        self.objects.update()
+        self.boxes.update()
+        self.lights.update()
+
+    def draw(self, screen):
+        """
+        Отрисовка всех объектов уровня.
+        """
+        custom_draw(self.enemies)
+        custom_draw(self.barriers)
+        custom_draw(self.objects)
+        custom_draw(self.boxes)
+        player.draw()
+        custom_draw(self.lights)
+
 
 cells = [Cell(x, y, 'inventory') for x, y in inventory_positions] + \
         [Cell(x, y, 'armor') for x, y in armor_positions] + \
         [Cell(x, y, 'weapon') for x, y in weapon_positions]
 
+
+level = Level(level_1_data, 1000, 1000, "map.png")
+
 #группы
 bullet_group = pygame.sprite.Group()
-boxs_group = pygame.sprite.Group()
-enemy_group = pygame.sprite.Group()
-objects_group = pygame.sprite.Group()
-barrier_group = pygame.sprite.Group()
 blood_particles = pygame.sprite.Group()
 
 #экземпляры класса
 player = Player(image="player.png", position=(400, 400))
-enemy = Enemy(position=(700, 450))
-mka = Wearon(position=(320, 420), image="мка.jpg", name="пушка-мяушка", full_clip=30, clip=30, damage=10)
-gun = Wearon(position=(320, 500), image="gun.png", name="пистолет",full_clip=15, clip=15, damage=10)
-medkit = Medkit(position=(320, 460), image="medkit.png", name="аптечка", use_medkit=3)
-clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_clips=3 ,name="патроны")
-fumo = AnimatedSprite(load_image("fumo.png"), 11, 1, 50, 50)
-fumo = Fumo(position=(200, 400), image=fumo, name="fumo", sound="data/baka.wav", num=1)
-light = Light(position=(400, 460), image="lamp.png", radius=300, intensity=240, switch=True)
+
 camera = Camera()
 alpha_ = TimeOfDay()
 
-x, y = 200, 200
-for _ in range(5):
-    x += 100
-    cords = x, y
-    barrier = Barrier(position=cords, image="box.png")
-    barrier_group.add(barrier)
-
-x, y = 200, 700
-for _ in range(5):
-    x += 100
-    cords = x, y
-    box = Box(position=cords, image="box.png", image_update="wreckage.png")
-    boxs_group.add(box)
-
-barrier_group.add(light)
-objects_group.add(medkit)
-objects_group.add(mka)
-objects_group.add(gun)
-objects_group.add(clips)
-enemy_group.add(enemy)
-objects_group.add(fumo)
-
 inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
-
-#карта
-map = load_image("map.png")
-map = pygame.transform.scale(map, (2000, 2000))
 
 armor_image = load_image("shotgun.png")
 weapon_image = load_image("M4A1-S.png")
@@ -681,7 +843,6 @@ weapon_item = Item(cells[1].rect.x, cells[1].rect.y,'weapon', weapon_image)
 # Помещение предметов в ячейки
 cells[0].item = armor_item
 cells[1].item = weapon_item
-map_rect = map.get_rect()
 
 programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
@@ -734,7 +895,7 @@ def main_loop(running):
 
             if event.type == pygame.KEYDOWN: #как мне гидры поюзать
                 if event.key == pygame.K_e:
-                    for obj in objects_group:
+                    for obj in level.objects:
                         if obj.use_me and type(obj) != Fumo:
                             obj.kill()
                             for j in player.inventory:
@@ -747,7 +908,7 @@ def main_loop(running):
                             obj.sound.play()
 
 
-        alpha_.update()
+        alpha_.update(10)
 
         # Создание затемняющего слоя
         dark_surface = pygame.Surface((WIDTH, HEIGHT))
@@ -757,27 +918,18 @@ def main_loop(running):
         camera.update()
 
         screen.fill(WHITE)
-        screen.blit(map, (-camera.camera_x, -camera.camera_y))
+        screen.blit(level.map, (-camera.camera_x, -camera.camera_y))
 
         #заргузка ассетов
         player.move()
         player.angle_finder(pygame.mouse.get_pos())
 
-        custom_draw(objects_group)
-        objects_group.update()
-
-        enemy_group.update(player, (player.rect.x - camera.camera_x + 30, player.rect.y - camera.camera_y + 30))
-
-        custom_draw(boxs_group)
-        boxs_group.update()
-
         custom_draw(bullet_group)
         bullet_group.update()
 
-        player.draw()
+        level.draw(screen)
 
-        custom_draw(barrier_group)
-        barrier_group.update()
+        level.update()
 
         custom_draw(blood_particles)
         blood_particles.update()
