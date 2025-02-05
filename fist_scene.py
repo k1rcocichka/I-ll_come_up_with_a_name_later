@@ -1,5 +1,6 @@
 import pygame
 import sys
+from main import *
 
 
 # Инициализация Pygame
@@ -60,14 +61,7 @@ def cutscene(screen, images, click_sounds, background_music, texts):
 
 # Основной игровой цикл
 def main_game_loop(screen):
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-
-        screen.fill((0, 0, 0))
-        pygame.display.flip()
+    main_loop(main_loop(True))
 
 
 # Главная программа

@@ -6,7 +6,6 @@ import random
 from settings import *
 from PIL import Image
 
-
 #создание игры
 HIT_CLOCK = 400
 
@@ -15,16 +14,6 @@ clock = pygame.time.Clock()
 screen = pygame.display.set_mode((HEIGHT, WIDTH))
 pygame.display.set_caption(TITLE)
 font = pygame.font.SysFont('Bleeker Cyrillic', 60)
-
-# Настройки времени суток
-time_of_day = {
-    "morning": {"length": 10000, "start_alpha": 210, "end_alpha": 128},  # Утро (10 секунд)
-    "day": {"length": 100000, "start_alpha": 128, "end_alpha": 0},  # День (10 секунд)
-    "evening": {"length": 10000, "start_alpha": 0, "end_alpha": 128},  # Вечер (10 секунд)
-    "night": {"length": 10000, "start_alpha": 128, "end_alpha": 210},  # Ночь (10 секунд)
-}
-current_time = 0  # Текущее время в текущей фазе
-current_phase = "morning"  # Текущая фаза времени суток
 
 
 def indicator():
@@ -46,6 +35,7 @@ def indicator():
         text = f"{player.inventory[player.inventory_cell].use_clips}"
         text = font.render(text, True, (0, 0, 0))
         screen.blit(text, (450, 520))
+
 
 #тут загрузка картинок
 def load_image(name, colorkey=None):
@@ -79,7 +69,7 @@ def split_animated_gif(gif_file_path):
 def custom_draw(group):
     for sprite in group:
         sprite.draw()
-    
+
 
 class Object(pygame.sprite.Sprite):
     """класс объктов"""
@@ -100,11 +90,11 @@ class Object(pygame.sprite.Sprite):
         self.name = name
 
     def draw(self):
-        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
+        screen.blit(self.sprite, (self.rect.x - camera.camera_x, self.rect.y - camera.camera_y))
 
     def use(self):
         if (player.rect.x > self.rect.x - 50 and player.rect.y > self.rect.y - 50) and (player.rect.x < self.rect.x + 50 and player.rect.y < self.rect.y + 50):
-            screen.blit(self.sprite_e, (self.rect_e.x - camera_x, self.rect_e.y - camera_y - 40))
+            screen.blit(self.sprite_e, (self.rect_e.x - camera.camera_x, self.rect_e.y - camera.camera_y - 40))
             self.use_me = True
         else:
             self.use_me = False
@@ -155,7 +145,7 @@ class Bullet(pygame.sprite.Sprite):
         """передвижение и смерть"""
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
-        if self.rect.right < 0 or self.rect.left > WIDTH + camera_x or self.rect.top > HEIGHT + camera_y or self.rect.bottom < 0:
+        if self.rect.right < 0 or self.rect.left > WIDTH + camera.camera_x or self.rect.top > HEIGHT + camera.camera_y or self.rect.bottom < 0:
             self.kill()
         
         for box in boxs_group:
@@ -171,7 +161,7 @@ class Bullet(pygame.sprite.Sprite):
         """рисууем пулю"""
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
+        screen.blit(rotate_image, (rotate_rect.x - camera.camera_x, rotate_rect.y - camera.camera_y))
 
 
 class AnimatedSprite(pygame.sprite.Sprite):
@@ -222,7 +212,7 @@ class BloodParticle(pygame.sprite.Sprite):
             self.kill()
         
     def draw(self):
-        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
+        screen.blit(self.sprite, (self.rect.x - camera.camera_x, self.rect.y - camera.camera_y))
 
 
 class Player():
@@ -257,7 +247,7 @@ class Player():
     def draw(self):
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
+        screen.blit(rotate_image, (rotate_rect.x - camera.camera_x, rotate_rect.y - camera.camera_y))
 
         if DISPLAY_iNVENTORY:
             screen.blit(self.inventory_sprite, (0, 0))
@@ -306,8 +296,8 @@ class Player():
         
     """штука для отслежки курсора"""
     def angle_finder(self, target_pos):
-        d_x = target_pos[0] - self.rect.centerx + camera_x
-        d_y = target_pos[1] - self.rect.centery + camera_y
+        d_x = target_pos[0] - self.rect.centerx + camera.camera_x
+        d_y = target_pos[1] - self.rect.centery + camera.camera_y
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
     """ограничитель"""
@@ -336,7 +326,7 @@ class Barrier(pygame.sprite.Sprite):
         self.rect.center = position
 
     def draw(self):
-        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
+        screen.blit(self.sprite, (self.rect.x - camera.camera_x, self.rect.y - camera.camera_y))
 
 
 class Light(Barrier):
@@ -359,9 +349,9 @@ class Light(Barrier):
 
     def draw(self):
         """Отрисовывает источник света на экране."""
-        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
-        if current_phase != "day" and self.switch:
-            screen.blit(self.light_surface, (self.position[0] - self.radius - camera_x, self.position[1] - self.radius - camera_y))
+        screen.blit(self.sprite, (self.rect.x - camera.camera_x, self.rect.y - camera.camera_y))
+        if alpha_.current_phase == "night" and self.switch:
+            screen.blit(self.light_surface, (self.position[0] - self.radius - camera.camera_x, self.position[1] - self.radius - camera.camera_y))
 
 
 class Box(Barrier):
@@ -383,9 +373,9 @@ class Box(Barrier):
 
     def draw(self):
         if self.destroy:
-            screen.blit(self.sprite_update, (self.rect_update.x - camera_x, self.rect_update.y - camera_y))
+            screen.blit(self.sprite_update, (self.rect_update.x - camera.camera_x, self.rect_update.y - camera.camera_y))
         else:
-            screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
+            screen.blit(self.sprite, (self.rect.x - camera.camera_x, self.rect.y - camera.camera_y))
 
 
 class Enemy(pygame.sprite.Sprite):
@@ -413,13 +403,13 @@ class Enemy(pygame.sprite.Sprite):
         self.target(target_pos)
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        screen.blit(rotate_image, (rotate_rect.x - camera_x, rotate_rect.y - camera_y))
+        screen.blit(rotate_image, (rotate_rect.x - camera.camera_x, rotate_rect.y - camera.camera_y))
 
         fill = (self.hp / 100) * 60
         
-        bar_hp = pygame.draw.rect(screen, LIGHTRED, (rotate_rect.x - camera_x + 30, rotate_rect.y - camera_y, 60, 10))
-        lost_hp = pygame.draw.rect(screen, LIGHTGREEN, (rotate_rect.x - camera_x + 30, rotate_rect.y - camera_y, fill, 10))
-        outline = pygame.draw.rect(screen, LIGHTGREY, (rotate_rect.x - camera_x + 30, rotate_rect.y - camera_y, 60, 10), 2)
+        bar_hp = pygame.draw.rect(screen, LIGHTRED, (rotate_rect.x - camera.camera_x + 30, rotate_rect.y - camera.camera_y, 60, 10))
+        lost_hp = pygame.draw.rect(screen, LIGHTGREEN, (rotate_rect.x - camera.camera_x + 30, rotate_rect.y - camera.camera_y, fill, 10))
+        outline = pygame.draw.rect(screen, LIGHTGREY, (rotate_rect.x - camera.camera_x + 30, rotate_rect.y - camera.camera_y, 60, 10), 2)
         
         if self.hp <= 0:
             self.kill()
@@ -448,7 +438,7 @@ class Enemy(pygame.sprite.Sprite):
                 for _ in range(20):  # Создаем 20 частиц
                     blood_particles.add(BloodParticle(image="blood.png", position=player.rect.center))
 
-        for bullets in bullet_group:
+        for bullet in bullet_group:
             if self.rect.colliderect(bullet) and self.hp >= 0:
                 self.hp = self.hp - player.inventory[player.inventory_cell].damage
                 # Создание частиц крови
@@ -463,14 +453,14 @@ class Enemy(pygame.sprite.Sprite):
 
     def angle_finder(self, target_pos):
         """поиск врага"""
-        d_x = target_pos[0] - self.rect.centerx + camera_x
-        d_y = target_pos[1] - self.rect.centery + camera_y
+        d_x = target_pos[0] - self.rect.centerx + camera.camera_x
+        d_y = target_pos[1] - self.rect.centery + camera.camera_y
         self.angle =- math.degrees(math.atan2(d_y, d_x))
 
     def target(self, target_pos):
         radius_surface = pygame.Surface((self.detection_radius * 2, self.detection_radius * 2), pygame.SRCALPHA)
         radius = pygame.draw.circle(radius_surface, (255, 0, 0, 50), (self.detection_radius, self.detection_radius), self.detection_radius)
-        screen.blit(radius_surface, (self.rect.centerx - self.detection_radius - camera_x, self.rect.centery - self.detection_radius - camera_y))
+        screen.blit(radius_surface, (self.rect.centerx - self.detection_radius - camera.camera_x, self.rect.centery - self.detection_radius - camera.camera_y))
         distance_to_player = math.hypot(
             player.rect.centerx - self.rect.centerx,
             player.rect.centery - self.rect.centery
@@ -552,11 +542,11 @@ class Fumo(pygame.sprite.Sprite):
         self.sprite = pygame.transform.scale(self.sprite, (100, 100))
         self.rect = self.sprite.get_rect()
         self.rect.center = self.position
-        screen.blit(self.sprite, (self.rect.x - camera_x, self.rect.y - camera_y))
+        screen.blit(self.sprite, (self.rect.x - camera.camera_x, self.rect.y - camera.camera_y))
 
     def use(self):
         if (player.rect.x > self.rect.x - 50 and player.rect.y > self.rect.y - 50) and (player.rect.x < self.rect.x + 50 and player.rect.y < self.rect.y + 50):
-            screen.blit(self.sprite_e, (self.rect_e.x - camera_x, self.rect_e.y - camera_y - 40))
+            screen.blit(self.sprite_e, (self.rect_e.x - camera.camera_x, self.rect_e.y - camera.camera_y - 40))
             self.use_me = True
         else:
             self.use_me = False
@@ -584,6 +574,46 @@ class Fumo(pygame.sprite.Sprite):
             file.writelines(lines_split)
 
 
+class Camera():
+    def __init__(self):
+        self.camera_x = 0
+        self.camera_y = 0
+
+    def update(self):
+        self.camera_x = player.rect.x - WIDTH // 2 + 100 // 2
+        self.camera_y = player.rect.y - HEIGHT // 2 + 100 // 2
+
+
+class TimeOfDay:
+    def __init__(self):
+        self.phases = {
+            "morning": {"length": 10000, "start_alpha": 210, "end_alpha": 128},
+            "day": {"length": 10000, "start_alpha": 128, "end_alpha": 0},
+            "evening": {"length": 10000, "start_alpha": 0, "end_alpha": 128},
+            "night": {"length": 10000, "start_alpha": 128, "end_alpha": 210},
+        }
+        self.current_phase = "morning"
+        self.current_time = 0
+
+    def update(self):
+        self.current_time += 100
+        phase_data = self.phases[self.current_phase]
+        if self.current_time >= phase_data["length"]:
+            self.next_phase()
+
+    def next_phase(self):
+        phases = list(self.phases.keys())
+        current_index = phases.index(self.current_phase)
+        next_index = (current_index + 1) % len(phases)
+        self.current_phase = phases[next_index]
+        self.current_time = 0
+
+    def get_alpha(self):
+        phase_data = self.phases[self.current_phase]
+        progress = self.current_time / phase_data["length"]
+        return phase_data["start_alpha"] + (phase_data["end_alpha"] - phase_data["start_alpha"]) * progress
+    
+
 cells = [Cell(x, y, 'inventory') for x, y in inventory_positions] + \
         [Cell(x, y, 'armor') for x, y in armor_positions] + \
         [Cell(x, y, 'weapon') for x, y in weapon_positions]
@@ -606,6 +636,8 @@ clips = ClipsWearon(position=(320, 550), image="clips.png", clips_many=10, use_c
 fumo = AnimatedSprite(load_image("fumo.png"), 11, 1, 50, 50)
 fumo = Fumo(position=(200, 400), image=fumo, name="fumo", sound="data/baka.wav", num=1)
 light = Light(position=(400, 460), image="lamp.png", radius=300, intensity=240, switch=True)
+camera = Camera()
+alpha_ = TimeOfDay()
 
 x, y = 200, 200
 for _ in range(5):
@@ -653,132 +685,109 @@ map_rect = map.get_rect()
 
 programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
-inventory_open = False
-running = True
-dragging_item = None
-original_cell = None
 
 #запуск игры
-while running:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            running = False
+def main_loop(running):
+    inventory_open = False
+    running = True
+    dragging_item = None
+    original_cell = None
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
 
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_r:
-                inventory_open = not inventory_open
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_r:
+                    inventory_open = not inventory_open
 
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_1:
-                player.inventory_cell = 0
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_1:
+                    player.inventory_cell = 0
 
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_2:
-                player.inventory_cell = 1
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_2:
+                    player.inventory_cell = 1
 
-        if event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_3:
-                player.inventory_cell = 2
-        
-        if event.type == pygame.MOUSEBUTTONUP:
-            if player.have_wearon() and type(player.inventory[player.inventory_cell]) == Wearon: #проверка оружия
-                if player.inventory[player.inventory_cell].full_clip > 0:
-                    player.inventory[player.inventory_cell].full_clip -= 1
-                    bullet = Bullet(player.rect.center, player.angle)
-                    bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
-                    bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
-                    bullet_group.add(bullet)
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_3:
+                    player.inventory_cell = 2
 
-            if type(player.inventory[player.inventory_cell]) == Medkit and player.inventory[player.inventory_cell].use_medkit > 0: #проверка на аптечку
-                player.inventory[player.inventory_cell].use_medkit -= 1
-                player.hp += 50
+            if event.type == pygame.MOUSEBUTTONUP:
+                if player.have_wearon() and type(player.inventory[player.inventory_cell]) == Wearon: #проверка оружия
+                    if player.inventory[player.inventory_cell].full_clip > 0:
+                        player.inventory[player.inventory_cell].full_clip -= 1
+                        bullet = Bullet(player.rect.center, player.angle)
+                        bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
+                        bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
+                        bullet_group.add(bullet)
 
-            if type(player.inventory[player.inventory_cell]) == ClipsWearon and player.inventory[player.inventory_cell].use_clips > 0:
-                for obj in player.inventory:
-                    if type(obj) == Wearon:
-                        obj.full_clip += player.inventory[player.inventory_cell].clips_many
-                player.inventory[player.inventory_cell].use_clips -= 1
+                if type(player.inventory[player.inventory_cell]) == Medkit and player.inventory[player.inventory_cell].use_medkit > 0: #проверка на аптечку
+                    player.inventory[player.inventory_cell].use_medkit -= 1
+                    player.hp += 50
 
-        if event.type == pygame.KEYDOWN: #как мне гидры поюзать
-            if event.key == pygame.K_e:
-                for obj in objects_group:
-                    if obj.use_me and type(obj) != Fumo:
-                        obj.kill()
-                        for j in player.inventory:
-                           if j == None:
-                               player.inventory[player.inventory.index(None)] = obj
-                               break
-                    if obj.use_me and type(obj) == Fumo:
-                        obj.save()
-                        obj.kill()
-                        obj.sound.play()
+                if type(player.inventory[player.inventory_cell]) == ClipsWearon and player.inventory[player.inventory_cell].use_clips > 0:
+                    for obj in player.inventory:
+                        if type(obj) == Wearon:
+                            obj.full_clip += player.inventory[player.inventory_cell].clips_many
+                    player.inventory[player.inventory_cell].use_clips -= 1
 
-    camera_x = player.rect.x - WIDTH // 2 + 100 // 2
-    camera_y = player.rect.y - HEIGHT // 2 + 100 // 2
+            if event.type == pygame.KEYDOWN: #как мне гидры поюзать
+                if event.key == pygame.K_e:
+                    for obj in objects_group:
+                        if obj.use_me and type(obj) != Fumo:
+                            obj.kill()
+                            for j in player.inventory:
+                               if j == None:
+                                   player.inventory[player.inventory.index(None)] = obj
+                                   break
+                        if obj.use_me and type(obj) == Fumo:
+                            obj.save()
+                            obj.kill()
+                            obj.sound.play()
 
-    # Обновление времени суток
-    current_time += clock.get_time()
-    if current_time >= time_of_day[current_phase]["length"]:
-        # Переход к следующей фазе
-        if current_phase == "morning":
-            current_phase = "day"
-        elif current_phase == "day":
-            current_phase = "evening"
-        elif current_phase == "evening":
-            current_phase = "night"
-        elif current_phase == "night":
-            current_phase = "morning"
-        current_time = 0
 
-    phase_data = time_of_day[current_phase]
-    progress = current_time / phase_data["length"]  # Прогресс текущей фазы (от 0 до 1)
-    alpha = phase_data["start_alpha"] + (phase_data["end_alpha"] - phase_data["start_alpha"]) * progress
+        alpha_.update()
 
-    # Создание затемняющего слоя
-    dark_surface = pygame.Surface((WIDTH, HEIGHT))
-    dark_surface.fill(BLACK)
-    dark_surface.set_alpha(alpha)  # Установка прозрачности  # Наложение слоя
+        # Создание затемняющего слоя
+        dark_surface = pygame.Surface((WIDTH, HEIGHT))
+        dark_surface.fill(BLACK)
+        dark_surface.set_alpha(alpha_.get_alpha())  # Установка прозрачности  # Наложение слоя
 
-    screen.fill(WHITE)
-    screen.blit(map, (-camera_x, -camera_y))
-    
-    #заргузка ассетов
-    player.move()
-    player.angle_finder(pygame.mouse.get_pos())
-    
-    custom_draw(objects_group)
-    objects_group.update()
+        camera.update()
 
-    enemy_group.update(player, (player.rect.x - camera_x + 30, player.rect.y - camera_y + 30))
+        screen.fill(WHITE)
+        screen.blit(map, (-camera.camera_x, -camera.camera_y))
 
-    custom_draw(boxs_group)
-    boxs_group.update()
+        #заргузка ассетов
+        player.move()
+        player.angle_finder(pygame.mouse.get_pos())
 
-    custom_draw(bullet_group)
-    bullet_group.update()
+        custom_draw(objects_group)
+        objects_group.update()
 
-    player.draw()
+        enemy_group.update(player, (player.rect.x - camera.camera_x + 30, player.rect.y - camera.camera_y + 30))
 
-    custom_draw(barrier_group)
-    barrier_group.update()
+        custom_draw(boxs_group)
+        boxs_group.update()
 
-    custom_draw(blood_particles)
-    blood_particles.update()
+        custom_draw(bullet_group)
+        bullet_group.update()
 
-    indicator()
-    screen.blit(dark_surface, (0, 0))
-    
-    if inventory_open:
-        # Отображаем инвентарь
-        screen.blit(inventor_image, (center_x, center_y))
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            for cell in cells:
-                if cell.item and cell.item.rect.collidepoint(event.pos):
-                    dragging_item = cell.item
-                    original_cell = cell
-                    cell.item = None
-                    break
+        player.draw()
 
+        custom_draw(barrier_group)
+        barrier_group.update()
+
+        custom_draw(blood_particles)
+        blood_particles.update()
+
+        indicator()
+        screen.blit(dark_surface, (0, 0))
+
+        if inventory_open:
+            # Отображаем инвентарь
+            screen.blit(inventor_image, (center_x, center_y))
             if event.type == pygame.MOUSEBUTTONDOWN:
                 for cell in cells:
                     if cell.item and cell.item.rect.collidepoint(event.pos):
@@ -787,27 +796,73 @@ while running:
                         cell.item = None
                         break
 
+                if event.type == pygame.MOUSEBUTTONDOWN:
+                    for cell in cells:
+                        if cell.item and cell.item.rect.collidepoint(event.pos):
+                            dragging_item = cell.item
+                            original_cell = cell
+                            cell.item = None
+                            break
+
+                if event.type == pygame.MOUSEBUTTONUP:
+                    if dragging_item:
+                        placed = False
+                        for cell in cells:
+                            if cell.rect.collidepoint(event.pos):
+                                if cell.cell_type != 'inventory' and cell.cell_type == dragging_item.item_type:
+                                    dragging_item.rect.topleft = cell.rect.topleft
+                                    cell.item = dragging_item
+                                    placed = True
+                                    break
+                                elif cell.cell_type == 'inventory':
+                                    if cell.item is None:  # Если ячейка пустая
+                                        dragging_item.rect.topleft = cell.rect.topleft
+                                        cell.item = dragging_item
+                                        placed = True
+                                        break
+                                    else:  # Если ячейка занята, возвращаем предмет обратно
+                                        original_cell.item = dragging_item
+                                        dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
+                                        placed = True
+                                        break
+
+                        if not placed and original_cell:
+                            dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
+                            original_cell.item = dragging_item
+
+                        dragging_item = None
+                        original_cell = None
+
+                if event.type == pygame.MOUSEMOTION:
+                    if dragging_item:
+                        dragging_item.rect.topleft = event.pos
+
+
+            # Отрисовка ячеек
+            for cell in cells:
+                cell.draw(screen)
+
+            # Отрисовка перетаскиваемого предмета, если он есть
+            if dragging_item:
+                screen.blit(dragging_item.image, dragging_item.rect)
+
+            pygame.display.flip()
+
             if event.type == pygame.MOUSEBUTTONUP:
                 if dragging_item:
                     placed = False
                     for cell in cells:
                         if cell.rect.collidepoint(event.pos):
-                            if cell.cell_type != 'inventory' and cell.cell_type == dragging_item.item_type:
+                            if cell.item is None:  # Если ячейка пустая
                                 dragging_item.rect.topleft = cell.rect.topleft
                                 cell.item = dragging_item
                                 placed = True
                                 break
-                            elif cell.cell_type == 'inventory':
-                                if cell.item is None:  # Если ячейка пустая
-                                    dragging_item.rect.topleft = cell.rect.topleft
-                                    cell.item = dragging_item
-                                    placed = True
-                                    break
-                                else:  # Если ячейка занята, возвращаем предмет обратно
-                                    original_cell.item = dragging_item
-                                    dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
-                                    placed = True
-                                    break
+                            else:  # Если ячейка занята, возвращаем предмет обратно
+                                original_cell.item = dragging_item
+                                dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
+                                placed = True
+                                break
 
                     if not placed and original_cell:
                         dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
@@ -820,46 +875,8 @@ while running:
                 if dragging_item:
                     dragging_item.rect.topleft = event.pos
 
-
-        # Отрисовка ячеек
-        for cell in cells:
-            cell.draw(screen)
-
-        # Отрисовка перетаскиваемого предмета, если он есть
-        if dragging_item:
-            screen.blit(dragging_item.image, dragging_item.rect)
-
         pygame.display.flip()
 
-        if event.type == pygame.MOUSEBUTTONUP:
-            if dragging_item:
-                placed = False
-                for cell in cells:
-                    if cell.rect.collidepoint(event.pos):
-                        if cell.item is None:  # Если ячейка пустая
-                            dragging_item.rect.topleft = cell.rect.topleft
-                            cell.item = dragging_item
-                            placed = True
-                            break
-                        else:  # Если ячейка занята, возвращаем предмет обратно
-                            original_cell.item = dragging_item
-                            dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
-                            placed = True
-                            break
+        clock.tick(FPS)
 
-                if not placed and original_cell:
-                    dragging_item.rect.topleft = (original_cell.rect.x, original_cell.rect.y)
-                    original_cell.item = dragging_item
-
-                dragging_item = None
-                original_cell = None
-
-        if event.type == pygame.MOUSEMOTION:
-            if dragging_item:
-                dragging_item.rect.topleft = event.pos
-
-    pygame.display.flip()
-
-    clock.tick(FPS)
-
-pygame.quit()
+    pygame.quit()
