@@ -75,7 +75,7 @@ class GameMenu:
                                 print("продолжить")
                                 # КОД ПРОДОЛЖАЮЩИЙ ИГРУ
                             elif self.menu_items[i] == "Титры":
-                                print("Титры")
+                                show_titles(800, 600, text_sequence) #после окончания титров, игра завершает работу
                                 # вопрос, что вы хотите сделать в титрах?
                                 # расписать кто что делал кратко
                             elif self.menu_items[i] == "Достижение":
@@ -105,6 +105,38 @@ class GameMenu:
         sys.exit()
 
 
+def show_titles(screen_width, screen_height, text_list, font_size=36, font_color=(255, 255, 255)):
+    pygame.init()
+    screen = pygame.display.set_mode((screen_width, screen_height))
+    pygame.display.set_caption("Титры")
+    font = pygame.font.Font(None, font_size)
+    current_text_index = 0
+    running = True
+    while running:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                current_text_index += 1  # Переключение на следующий текст
+                if current_text_index >= len(text_list):
+                    running = False  # Завершение программы после последнего текста
+        screen.fill((0, 0, 0))
+        # Проверяем, есть ли еще текст для отображения
+        if current_text_index < len(text_list):
+            current_text = text_list[current_text_index]
+            text_surface = font.render(current_text, True, font_color)
+            text_rect = text_surface.get_rect(center=(screen_width // 2, screen_height // 2))
+            screen.blit(text_surface, text_rect)
+        pygame.display.flip()
+    pygame.quit()
+    sys.exit()
+
+
 if __name__ == '__main__':
+    text_sequence = ["Над проектом работали:, \n Коноплева Анжелика \n Кечуткин Игорь \n Кривоногов Андрей",
+                     "Кечуткин Игорь сделал код, \n отвечающий препятствия, появление врагов. \n"
+                     " Собрал игру в единое целое", "Кривоногов Андрей ответственный за инвентарь, \n"
+                                                    " передвижение героя", "Коноплева Анжелика сделала меню игры \n "
+                                                                           "и начало игры"]
     menu = GameMenu(600, 600, "Игровое Меню")
     menu.run()
