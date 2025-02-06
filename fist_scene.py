@@ -91,7 +91,8 @@ def main():
     ]
 
     cutscene(screen, images, click_sounds, background_music, texts)  # Запуск катсцены
-    main_game_loop(screen)  
+    main_game_loop(screen)
+    return True
 
 
 if __name__ == "__main__":

@@ -6,6 +6,7 @@ import random
 from settings import *
 from PIL import Image
 
+
 #загрузка лвлов
 level_1_data = {
     "enemies": [
@@ -29,7 +30,7 @@ level_1_data = {
             "intensity": 250,
             "switch": True
         }
-        #position, image, radius, intensity, switch
+
     ],
     "objects": [
         {
@@ -40,6 +41,12 @@ level_1_data = {
             "full_clip": 30,
             "clip": 30,
             "damage": 10
+        },
+        {
+            "type": "knife",
+            "position": (320, 380),
+            "image": "knife.png",
+            "name": "нож",
         },
         {
             "type": "medkit",
@@ -59,7 +66,7 @@ level_1_data = {
         {
             "type": "fumo",
             "position": (200, 400),
-            "image": "fumo.gif",
+            "image": "fumo.png",
             "name": "fumo",
             "sound": "data/baka.wav",
             "num": 1
@@ -96,7 +103,6 @@ def indicator():
         text = f"{player.inventory[player.inventory_cell].use_clips}"
         text = font.render(text, True, (0, 0, 0))
         screen.blit(text, (450, 520))
-
 
 #тут загрузка картинок
 def load_image(name, colorkey=None):
@@ -229,6 +235,11 @@ class Bullet(pygame.sprite.Sprite):
         screen.blit(rotate_image, (rotate_rect.x - camera.camera_x, rotate_rect.y - camera.camera_y))
 
 
+class Knife(Object):
+    def __init__(self, position, image, name, *groups):
+        super().__init__(position, image, name, *groups)
+
+
 class AnimatedSprite(pygame.sprite.Sprite):
     """класс анимация"""
     def __init__(self, sheet, columns, rows, x, y):
@@ -300,6 +311,14 @@ class Player():
         self.player_hit_clock = 0
         self.player_sprint_clock = 0
         self.inventory = [None, None, None]
+        self.death = False
+
+        self.attack_range = 50  # Расстояние атаки
+        self.attack_damage = 5
+        self.detection_radius = 100
+
+        self.timer = 0 # обнуляем начальное значение для отсчета
+        pygame.time.set_timer(pygame.USEREVENT, 1000) # запускаем таймер (в милисекундах) на срабатывание каждую секунд
 
         self.inventory_sprite = load_image("inventory.png")
         self.inventory_sprite = pygame.transform.scale(self.inventory_sprite, (600, 600))
@@ -320,7 +339,6 @@ class Player():
     """движения"""
     def move(self):
         original_position = self.rect.center
-
         key = pygame.key.get_pressed()
         if key[pygame.K_w]:
             self.rect.y -= self.speed_y
@@ -362,7 +380,29 @@ class Player():
         for light in level.lights:
             if self.rect.colliderect(light.rect):
                 self.rect.center = original_position
-        
+
+        if self.hp <= 0:
+            self.death = True
+
+    def melee_attack(self):
+        # Анимация рукопашной атаки
+        if type(self.inventory[self.inventory_cell]) == Knife:
+            self.is_attacking = True
+            self.check_melee_hit()
+
+    def check_melee_hit(self):
+        radius_surface = pygame.Surface((self.detection_radius * 2, self.detection_radius * 2), pygame.SRCALPHA)
+        radius = pygame.draw.circle(radius_surface, (255, 0, 0, 50), (self.detection_radius, self.detection_radius), self.detection_radius)
+        screen.blit(radius_surface, (self.rect.centerx - self.detection_radius - camera.camera_x, self.rect.centery - self.detection_radius - camera.camera_y))
+        # Проверка попадания по врагамr
+        for enemy in level.enemies:
+            distance_to_player = math.hypot(
+                enemy.rect.centerx - self.rect.centerx,
+                enemy.rect.centery - self.rect.centery
+            )      
+            if distance_to_player <= self.detection_radius:
+                enemy.hp -= self.attack_damage
+    
     """штука для отслежки курсора"""
     def angle_finder(self, target_pos):
         d_x = target_pos[0] - self.rect.centerx + camera.camera_x
@@ -466,6 +506,7 @@ class Enemy(pygame.sprite.Sprite):
         self.angle = 0
         self.hp = 100
         self.detection_radius = 200
+        self.damage = 1
 
     def update(self, target, target_pos):
         """рисуем врага"""
@@ -501,11 +542,11 @@ class Enemy(pygame.sprite.Sprite):
             if self.rect.colliderect(light.rect):
                 self.rect.center = original_position
 
-        if self.rect.colliderect(player) and self.hp > 0:
+        if self.rect.colliderect(player) and self.hp > 0 and player.hp > 0:
             time_now = pygame.time.get_ticks()
             self.rect.center = original_position
             if time_now > player.player_hit_clock:
-                player.hp = player.hp - 10
+                player.hp = player.hp - self.damage
                 player.player_hit_clock = time_now + HIT_CLOCK
                 # Создание частиц крови
                 for _ in range(20):  # Создаем 20 частиц
@@ -521,8 +562,8 @@ class Enemy(pygame.sprite.Sprite):
 
     def border(self):
         """ограничитель"""
-        self.rect.x = max(0, min(self.rect.x, map_rect.width - self.sprite.get_height()))
-        self.rect.y = max(0, min(self.rect.y, map_rect.height - self.sprite.get_width()))
+        self.rect.x = max(0, min(self.rect.x, level.map_rect.width - self.sprite.get_height()))
+        self.rect.y = max(0, min(self.rect.y, level.map_rect.height - self.sprite.get_width()))
 
     def angle_finder(self, target_pos):
         """поиск врага"""
@@ -538,7 +579,7 @@ class Enemy(pygame.sprite.Sprite):
             player.rect.centerx - self.rect.centerx,
             player.rect.centery - self.rect.centery
         )
-        if distance_to_player <= self.detection_radius:
+        if distance_to_player <= self.detection_radius and not player.death:
             self.angle_finder(target_pos)
             self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
             self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
@@ -550,7 +591,6 @@ class Enemy(pygame.sprite.Sprite):
                 if self.can_move:
                     self.angle = random.randint(-180, 180)
                     self.can_move = False
-                    print(self.enemy_tick)
                 if self.enemy_tick >= 330:
                     self.enemy_tick = 0
                     self.can_move = True
@@ -771,6 +811,12 @@ class Level:
                     use_clips=object_data["use_clips"],
                     name=object_data["name"]
                 )
+            elif object_data["type"] == "knife":
+                obj = Knife(
+                    position=object_data["position"],
+                    image=object_data["image"],
+                    name=object_data["name"]
+                )
             elif object_data["type"] == "fumo":
                 fumo_sprite = AnimatedSprite(
                     load_image(object_data["image"]),
@@ -830,6 +876,7 @@ alpha_ = TimeOfDay()
 inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
 
+
 armor_image = load_image("shotgun.png")
 weapon_image = load_image("M4A1-S.png")
 
@@ -850,95 +897,69 @@ pygame.display.set_icon(programIcon)
 #запуск игры
 def main_loop(running):
     inventory_open = False
-    running = True
     dragging_item = None
     original_cell = None
+
     while running:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
             if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_r:
+                if event.key == pygame.K_i:
                     inventory_open = not inventory_open
-
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_1:
+                    print("INV")
+                elif event.key == pygame.K_1:
                     player.inventory_cell = 0
-
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_2:
+                elif event.key == pygame.K_2:
                     player.inventory_cell = 1
-
-            if event.type == pygame.KEYDOWN:
-                if event.key == pygame.K_3:
+                elif event.key == pygame.K_3:
                     player.inventory_cell = 2
+                elif event.key == pygame.K_r:
+                    print("R")
+                    player.melee_attack()    
 
             if event.type == pygame.MOUSEBUTTONUP:
-                if player.have_wearon() and type(player.inventory[player.inventory_cell]) == Wearon: #проверка оружия
-                    if player.inventory[player.inventory_cell].full_clip > 0:
-                        player.inventory[player.inventory_cell].full_clip -= 1
-                        bullet = Bullet(player.rect.center, player.angle)
-                        bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
-                        bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
-                        bullet_group.add(bullet)
+                handle_mouse_button_up(event)
 
-                if type(player.inventory[player.inventory_cell]) == Medkit and player.inventory[player.inventory_cell].use_medkit > 0: #проверка на аптечку
-                    player.inventory[player.inventory_cell].use_medkit -= 1
-                    player.hp += 50
+            if event.type == pygame.KEYDOWN and event.key == pygame.K_e:
+                handle_interaction()
 
-                if type(player.inventory[player.inventory_cell]) == ClipsWearon and player.inventory[player.inventory_cell].use_clips > 0:
-                    for obj in player.inventory:
-                        if type(obj) == Wearon:
-                            obj.full_clip += player.inventory[player.inventory_cell].clips_many
-                    player.inventory[player.inventory_cell].use_clips -= 1
-
-            if event.type == pygame.KEYDOWN: #как мне гидры поюзать
-                if event.key == pygame.K_e:
-                    for obj in level.objects:
-                        if obj.use_me and type(obj) != Fumo:
-                            obj.kill()
-                            for j in player.inventory:
-                               if j == None:
-                                   player.inventory[player.inventory.index(None)] = obj
-                                   break
-                        if obj.use_me and type(obj) == Fumo:
-                            obj.save()
-                            obj.kill()
-                            obj.sound.play()
-
+            if player.death:
+                player.timer += 1
+                if player.timer > 5:
+                    pygame.time.set_timer(pygame.USEREVENT, 0)
+                    return True
+                screen.blit(you_die, (0, 0))
+                print(player.timer)
 
         alpha_.update(10)
 
-        # Создание затемняющего слоя
-        dark_surface = pygame.Surface((WIDTH, HEIGHT))
-        dark_surface.fill(BLACK)
-        dark_surface.set_alpha(alpha_.get_alpha())  # Установка прозрачности  # Наложение слоя
-
         camera.update()
-
         screen.fill(WHITE)
         screen.blit(level.map, (-camera.camera_x, -camera.camera_y))
 
-        #заргузка ассетов
         player.move()
         player.angle_finder(pygame.mouse.get_pos())
 
-        custom_draw(bullet_group)
         bullet_group.update()
-
-        level.draw(screen)
-
-        level.update()
-
-        custom_draw(blood_particles)
         blood_particles.update()
 
+        custom_draw(bullet_group)
+
+        level.draw(screen)
+        level.update()
+        
+        custom_draw(blood_particles)
         indicator()
+
+        dark_surface = pygame.Surface((WIDTH, HEIGHT))
+        dark_surface.fill(BLACK)
+        dark_surface.set_alpha(alpha_.get_alpha())
         screen.blit(dark_surface, (0, 0))
 
         if inventory_open:
-            # Отображаем инвентарь
+        # Отображаем инвентарь
             screen.blit(inventor_image, (center_x, center_y))
             if event.type == pygame.MOUSEBUTTONDOWN:
                 for cell in cells:
@@ -1032,3 +1053,38 @@ def main_loop(running):
         clock.tick(FPS)
 
     pygame.quit()
+
+
+def handle_mouse_button_up(event):
+    if player.have_wearon() and type(player.inventory[player.inventory_cell]) == Wearon:
+        if player.inventory[player.inventory_cell].full_clip > 0:
+            player.inventory[player.inventory_cell].full_clip -= 1
+            bullet = Bullet(player.rect.center, player.angle)
+            bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
+            bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
+            bullet_group.add(bullet)
+
+    if type(player.inventory[player.inventory_cell]) == Medkit and player.inventory[player.inventory_cell].use_medkit > 0:
+        player.inventory[player.inventory_cell].use_medkit -= 1
+        player.hp += 50
+
+    if type(player.inventory[player.inventory_cell]) == ClipsWearon and player.inventory[player.inventory_cell].use_clips > 0:
+        for obj in player.inventory:
+            if type(obj) == Wearon:
+                obj.full_clip += player.inventory[player.inventory_cell].clips_many
+        player.inventory[player.inventory_cell].use_clips -= 1
+
+def handle_interaction():
+    for obj in level.objects:
+        if obj.use_me and type(obj) != Fumo:
+            obj.kill()
+            for j in player.inventory:
+                if j is None:
+                    player.inventory[player.inventory.index(None)] = obj
+                    break
+        if obj.use_me and type(obj) == Fumo:
+            obj.save()
+            obj.kill()
+            obj.sound.play()
+
+main_loop(True)
