@@ -959,7 +959,7 @@ def main_loop(running):
                     pygame.time.set_timer(pygame.USEREVENT, 0)
                     return True
 
-        alpha_.update(10)
+        alpha_.update(5)
 
         camera.update()
         screen.fill(WHITE)
