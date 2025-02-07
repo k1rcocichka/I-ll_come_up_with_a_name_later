@@ -491,12 +491,24 @@ class Enemy(pygame.sprite.Sprite):
     """конструктор класса"""
     image = load_image("enemy.png")
     image = pygame.transform.scale(image, (100, 100))
+    zombey_sprite = AnimatedSprite(
+                    load_image("zombey_move.png"),
+                    columns=17,
+                    rows=1,
+                    x=50,
+                    y=50
+                )
     def __init__(self, position, *group):
         super().__init__(*group)
         self.sprite = Enemy.image
         self.rect = self.sprite.get_rect()
         self.rect.inflate_ip(-50, -50)
         self.mask = pygame.mask.from_surface(self.sprite)
+
+        self.sprite_zombie = Enemy.zombey_sprite
+        self.image_zombie = self.zombey_sprite.image
+        self.rect_zombie = self.image_zombie.get_rect()
+        self.rect_zombie.center = position
 
         self.can_move = True
         self.enemy_tick = 0
@@ -507,13 +519,25 @@ class Enemy(pygame.sprite.Sprite):
         self.hp = 100
         self.detection_radius = 200
         self.damage = 1
+        self.move_to_player = False
+        self.position = position
 
     def update(self, target, target_pos):
         """рисуем врага"""
         self.target(target_pos)
         rotate_image = pygame.transform.rotate(self.sprite, self.angle)
         rotate_rect = rotate_image.get_rect(center=self.rect.center)
-        screen.blit(rotate_image, (rotate_rect.x - camera.camera_x, rotate_rect.y - camera.camera_y))
+        if self.move_to_player:
+            self.sprite_zombie.update()
+            self.image_zombie = self.sprite_zombie.image
+            self.image_zombie = pygame.transform.scale(self.image_zombie, (100, 100))
+            self.rect_zombie = self.image_zombie.get_rect()
+            self.rect_zombie.center = self.rect.center
+            rotate_image = pygame.transform.rotate(self.image_zombie, self.angle)
+            rotate_rect = rotate_image.get_rect(center=self.rect.center)
+            screen.blit(rotate_image, (rotate_rect.x - camera.camera_x, rotate_rect.y - camera.camera_y))
+        else:
+            screen.blit(rotate_image, (rotate_rect.x - camera.camera_x, rotate_rect.y - camera.camera_y))
 
         fill = (self.hp / 100) * 60
         
@@ -529,6 +553,8 @@ class Enemy(pygame.sprite.Sprite):
         original_position = self.rect.center
         self.rect.x += self.speed_x
         self.rect.y += self.speed_y
+        self.rect_zombie.x += self.speed_x
+        self.rect_zombie.y += self.speed_y
 
         for box in level.boxes:
             if self.rect.colliderect(box.rect) and box.hp > 0:
@@ -583,11 +609,13 @@ class Enemy(pygame.sprite.Sprite):
             self.angle_finder(target_pos)
             self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
             self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
+            self.move_to_player = True
         else:
             self.enemy_tick += 1
             if self.enemy_tick >= 300:
                 self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
                 self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
+                self.move_to_player = True
                 if self.can_move:
                     self.angle = random.randint(-180, 180)
                     self.can_move = False
@@ -597,6 +625,7 @@ class Enemy(pygame.sprite.Sprite):
             else:
                 self.speed_x = 0
                 self.speed_y = 0
+                self.move_to_player = False
         self.move()
 
     def draw(self):
@@ -870,6 +899,7 @@ blood_particles = pygame.sprite.Group()
 #экземпляры класса
 player = Player(image="player.png", position=(400, 400))
 
+
 camera = Camera()
 alpha_ = TimeOfDay()
 
@@ -908,7 +938,6 @@ def main_loop(running):
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_i:
                     inventory_open = not inventory_open
-                    print("INV")
                 elif event.key == pygame.K_1:
                     player.inventory_cell = 0
                 elif event.key == pygame.K_2:
@@ -916,7 +945,6 @@ def main_loop(running):
                 elif event.key == pygame.K_3:
                     player.inventory_cell = 2
                 elif event.key == pygame.K_r:
-                    print("R")
                     player.melee_attack()    
 
             if event.type == pygame.MOUSEBUTTONUP:
@@ -930,8 +958,6 @@ def main_loop(running):
                 if player.timer > 5:
                     pygame.time.set_timer(pygame.USEREVENT, 0)
                     return True
-                screen.blit(you_die, (0, 0))
-                print(player.timer)
 
         alpha_.update(10)
 
