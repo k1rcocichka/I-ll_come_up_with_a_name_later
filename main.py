@@ -29,6 +29,19 @@ level_1_data = {
             "radius": 200,
             "intensity": 250,
             "switch": True
+        },
+    ],
+    "npcs": [
+        {
+            "position": (500, 400),
+            "image": "stone.png",
+            "name": "Лесник",
+            "dialogues": [
+                "Эй, путник! Ты не должен быть здесь...",
+                "Этот дом проклят. Уходи, пока не поздно.",
+                "Если ты настаиваешь, ищи ключ в доме.",
+                "Но помни: то, что в подвале, лучше оставить в покое."
+            ]
         }
 
     ],
@@ -314,8 +327,9 @@ class Player():
         self.death = False
 
         self.attack_range = 50  # Расстояние атаки
-        self.attack_damage = 5
+        self.attack_damage = 30
         self.detection_radius = 100
+        self.player_melle_tick = 0
 
         self.timer = 0 # обнуляем начальное значение для отсчета
         pygame.time.set_timer(pygame.USEREVENT, 1000) # запускаем таймер (в милисекундах) на срабатывание каждую секунд
@@ -387,8 +401,11 @@ class Player():
     def melee_attack(self):
         # Анимация рукопашной атаки
         if type(self.inventory[self.inventory_cell]) == Knife:
-            self.is_attacking = True
-            self.check_melee_hit()
+            time_now = pygame.time.get_ticks()
+            if time_now > self.player_melle_tick:
+                self.player_melle_tick = time_now + 700
+                self.is_attacking = True
+                self.check_melee_hit()
 
     def check_melee_hit(self):
         radius_surface = pygame.Surface((self.detection_radius * 2, self.detection_radius * 2), pygame.SRCALPHA)
@@ -775,6 +792,7 @@ class Level:
         self.objects = pygame.sprite.Group()
         self.boxes = pygame.sprite.Group()
         self.lights = pygame.sprite.Group()
+        self.npcs = pygame.sprite.Group()
         self.load_level()
 
     def load_level(self):
@@ -813,6 +831,15 @@ class Level:
                 image_update=boxs_data["image_update"]
             )
             self.boxes.add(box)
+
+        for npc_data in self.level_data.get("npcs", []):
+            npc = NPC(
+                position=npc_data["position"],
+                image=npc_data["image"],
+                name=npc_data["name"],
+                dialogues=npc_data["dialogues"]
+            )
+            self.npcs.add(npc)
 
         # Загрузка объектов
         for object_data in self.level_data.get("objects", []):
@@ -872,6 +899,7 @@ class Level:
         self.objects.update()
         self.boxes.update()
         self.lights.update()
+        self.npcs.update()
 
     def draw(self, screen):
         """
@@ -881,8 +909,53 @@ class Level:
         custom_draw(self.barriers)
         custom_draw(self.objects)
         custom_draw(self.boxes)
+        custom_draw(self.npcs)
         player.draw()
         custom_draw(self.lights)
+
+
+class NPC(pygame.sprite.Sprite):
+    def __init__(self, position, image, name, dialogues, *groups):
+        super().__init__(*groups)
+        self.image = load_image(image)
+        self.image = pygame.transform.scale(self.image, (50, 50))  # Размер NPC
+        self.rect = self.image.get_rect()
+        self.rect.center = position
+        self.name = name
+        self.dialogues = dialogues  # Список строк с диалогами
+        self.current_dialogue = 0
+        self.is_talking = False
+
+    def draw(self):
+        screen.blit(self.image, (self.rect.x - camera.camera_x, self.rect.y - camera.camera_y))
+
+    def interact(self):
+        """Начать диалог с NPC."""
+        self.is_talking = True
+        self.current_dialogue = 0
+
+    def next_dialogue(self):
+        """Перейти к следующему диалогу."""
+        if self.current_dialogue < len(self.dialogues) - 1:
+            self.current_dialogue += 1
+        else:
+            self.is_talking = False  # Завершить диалог
+
+    def draw_dialogue(self):
+        """Отрисовка диалога на экране."""
+        if self.is_talking:
+            dialogue_box = pygame.Surface((WIDTH - 100, 100))
+            dialogue_box.fill((0, 0, 0))
+            dialogue_box.set_alpha(200)
+            screen.blit(dialogue_box, (50, HEIGHT - 150))
+
+            font = pygame.font.SysFont('Arial', 24)
+            text = font.render(self.dialogues[self.current_dialogue], True, (255, 255, 255))
+            screen.blit(text, (70, HEIGHT - 130))
+
+            # Подсказка для продолжения диалога
+            hint = font.render("Нажмите E для продолжения...", True, (255, 255, 255))
+            screen.blit(hint, (70, HEIGHT - 100))
 
 
 cells = [Cell(x, y, 'inventory') for x, y in inventory_positions] + \
@@ -929,6 +1002,7 @@ def main_loop(running):
     inventory_open = False
     dragging_item = None
     original_cell = None
+    current_npc = None
 
     while running:
         for event in pygame.event.get():
@@ -945,7 +1019,21 @@ def main_loop(running):
                 elif event.key == pygame.K_3:
                     player.inventory_cell = 2
                 elif event.key == pygame.K_r:
-                    player.melee_attack()    
+                    player.melee_attack()
+
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_e:
+                    # Взаимодействие с NPC
+                    if current_npc:
+                        current_npc.next_dialogue()
+                        print("E")
+                    else:
+                        for npc in level.npcs:
+                            if npc.rect.colliderect(player.rect):
+                                current_npc = npc
+                                current_npc.interact()
+                                break    
+                        
 
             if event.type == pygame.MOUSEBUTTONUP:
                 handle_mouse_button_up(event)
@@ -1074,6 +1162,9 @@ def main_loop(running):
                 if dragging_item:
                     dragging_item.rect.topleft = event.pos
 
+        if current_npc:
+            current_npc.draw_dialogue()
+            
         pygame.display.flip()
 
         clock.tick(FPS)
