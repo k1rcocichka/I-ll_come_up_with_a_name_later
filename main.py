@@ -10,7 +10,9 @@ from PIL import Image
 #загрузка лвлов
 level_1_data = {
     "enemies": [
-        {"position": (700, 450)}
+        {"position": (700, 450)},
+        {"position": (700, 550)},
+        {"position": (700, 650)}
     ],
     "barriers": [
         {"position": (300, 200), "image": "box.png"},
@@ -49,11 +51,35 @@ level_1_data = {
         {
             "type": "weapon",
             "position": (320, 420),
-            "image": "мка.jpg",
-            "name": "пушка-мяушка",
+            "image": "assault.png",
+            "name": "винтовка",
             "full_clip": 30,
             "clip": 30,
-            "damage": 10
+            "damage": 20,
+            "weight": 80,
+            "height": 150
+        },
+        {
+            "type": "weapon",
+            "position": (320, 340),
+            "image": "gun.png",
+            "name": "пистолет",
+            "full_clip": 15,
+            "clip": 15,
+            "damage": 10,
+            "weight": 60,
+            "height": 60
+        },
+        {
+            "type": "weapon",
+            "position": (320, 300),
+            "image": "shotgun.png",
+            "name": "дробаш",
+            "full_clip": 8,
+            "clip": 8,
+            "damage": 30,
+            "weight": 50,
+            "height": 100
         },
         {
             "type": "knife",
@@ -117,6 +143,11 @@ def indicator():
         text = font.render(text, True, (0, 0, 0))
         screen.blit(text, (450, 520))
 
+    if type(player.inventory[player.inventory_cell]) == Knife:
+        text = f"1/1"
+        text = font.render(text, True, (0, 0, 0))
+        screen.blit(text, (450, 520))
+
 #тут загрузка картинок
 def load_image(name, colorkey=None):
     fullname = os.path.join('data', name)
@@ -158,7 +189,7 @@ class Object(pygame.sprite.Sprite):
     def __init__(self, position, image, name, *groups):
         super().__init__(*groups)
         image = load_image(image)
-        image = pygame.transform.scale(image, (50, 50))
+        image = pygame.transform.scale(image, (60, 60))
         self.sprite = image
         self.rect = self.sprite.get_rect()
         self.rect.center = position
@@ -185,8 +216,13 @@ class Object(pygame.sprite.Sprite):
 
 class Wearon(Object):
     """класс оружия"""
-    def __init__(self, position, image, name, full_clip, damage, clip, *groups):
+    def __init__(self, position, image, name, full_clip, damage, clip, height, weight, *groups):
         super().__init__(position, image, name, *groups)
+        image = load_image(image)
+        image = pygame.transform.scale(image, (height, weight))
+        self.sprite = image
+        self.rect = self.sprite.get_rect()
+        self.rect.center = position
         self.full_clip = full_clip
         self.clip = clip
         self.damage = damage
@@ -538,6 +574,7 @@ class Enemy(pygame.sprite.Sprite):
         self.damage = 1
         self.move_to_player = False
         self.position = position
+        self.random_move_time = random.randint(200, 400)
 
     def update(self, target, target_pos):
         """рисуем врага"""
@@ -585,6 +622,10 @@ class Enemy(pygame.sprite.Sprite):
             if self.rect.colliderect(light.rect):
                 self.rect.center = original_position
 
+        for enemy_ in level.enemies:
+            if self.rect.colliderect(enemy_.rect) and enemy_.rect_zombie.center != self.rect_zombie.center:
+                self.rect.center = original_position
+
         if self.rect.colliderect(player) and self.hp > 0 and player.hp > 0:
             time_now = pygame.time.get_ticks()
             self.rect.center = original_position
@@ -628,16 +669,16 @@ class Enemy(pygame.sprite.Sprite):
             self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
             self.move_to_player = True
         else:
-            self.enemy_tick += 1
-            if self.enemy_tick >= 300:
+            self.random_move_time += 1
+            if self.random_move_time >= 300:
                 self.speed_x = int(self.speed_x_ * math.cos(math.radians(self.angle)))
                 self.speed_y = -int(self.speed_y_ * math.sin(math.radians(self.angle)))
                 self.move_to_player = True
                 if self.can_move:
                     self.angle = random.randint(-180, 180)
                     self.can_move = False
-                if self.enemy_tick >= 330:
-                    self.enemy_tick = 0
+                if self.random_move_time >= 330:
+                    self.random_move_time = 0
                     self.can_move = True
             else:
                 self.speed_x = 0
@@ -850,7 +891,9 @@ class Level:
                     name=object_data["name"],
                     full_clip=object_data["full_clip"],
                     clip=object_data["clip"],
-                    damage=object_data["damage"]
+                    damage=object_data["damage"],
+                    height=object_data["height"],
+                    weight=object_data["weight"]
                 )
             elif object_data["type"] == "medkit":
                 obj = Medkit(
@@ -981,7 +1024,7 @@ inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inven
 
 
 armor_image = load_image("shotgun.png")
-weapon_image = load_image("M4A1-S.png")
+weapon_image = load_image("assault.png")
 
 armor_image = pygame.transform.scale(armor_image, (36, 36))
 weapon_image = pygame.transform.scale(weapon_image, (36, 36))
@@ -1164,7 +1207,7 @@ def main_loop(running):
 
         if current_npc:
             current_npc.draw_dialogue()
-            
+
         pygame.display.flip()
 
         clock.tick(FPS)
