@@ -6,7 +6,6 @@ import fist_scene
 
 class GameMenu:
     def __init__(self, width, height, title):
-
         # Цвета
         self.WHITE = (255, 255, 255)
         self.BLACK = (0, 0, 0)
@@ -20,15 +19,17 @@ class GameMenu:
         pygame.display.set_caption(title)
 
         self.font = pygame.font.Font(None, 36)
-        self.background_image = pygame.image.load("data/меню игры.jpg").convert()  
+        self.background_image = pygame.image.load("data/меню игры.jpg").convert()
         self.background_image = pygame.transform.scale(self.background_image, (width, height))
 
         self.menu_items = ["Начать", "Продолжить", "Титры", "Достижение", "Трофеи", "Загрузить", "Настройки", "Выход"]
         self.button_rects = []
-        self.button_colors = []
+        self.button_image = pygame.image.load("data/кнопки.jpg")
+        self.button_image = pygame.transform.scale(self.button_image, (self.width // 3, 50))
         self.button_height = 50
         self.button_spacing = 10
         self.start_y = self.height // 2 - (len(self.menu_items) * (self.button_height + self.button_spacing)) // 2
+
         self.music = pygame.mixer.Sound("data/музыка меню.mp3")
         self.music.play(-1)  # бесконечное воспроизведение музыки
 
@@ -52,19 +53,17 @@ class GameMenu:
 
     def _create_buttons(self):
         for i, item in enumerate(self.menu_items):
-            text_surface = self.font.render(item, True, self.BLACK)
-            text_rect = text_surface.get_rect(center=(
-            self.width // 2, self.start_y + i * (self.button_height + self.button_spacing) + self.button_height // 2))
-            button_rect = text_rect.inflate(20, 20)
-            self.button_rects.append(button_rect)
-            self.button_colors.append(self.GRAY)
+            text_rect = self.button_image.get_rect(center=(self.width // 2, self.start_y + i *
+                                                           (self.button_height + self.button_spacing)
+                                                           + self.button_height // 2))
+            self.button_rects.append(text_rect)
 
     def create_leaf_particle(self, x, y):
         leaf_image = random.choice(self.leaf_images)  # Выбор случайного изображения листика
         scale = random.uniform(0.01, 0.05)  # Случайное масштабирование
         leaf_image = pygame.transform.scale(leaf_image,
-                                            (int(leaf_image.get_width() * scale), int(leaf_image.get_height() * scale)))
-
+                                            (int(leaf_image.get_width() * scale),
+                                             int(leaf_image.get_height() * scale)))
         angle = random.uniform(-10, 360)  # Случайный угол поворота
         leaf_image = pygame.transform.rotate(leaf_image, angle)
         vx = random.uniform(-0.5, 0.5)  # Скорость по горизонтали
@@ -94,10 +93,10 @@ class GameMenu:
     def draw_menu(self):
         self.screen.blit(self.background_image, (0, 0))
         for i, rect in enumerate(self.button_rects):
-            pygame.draw.rect(self.screen, self.button_colors[i], rect)
+            self.screen.blit(self.button_image, rect.topleft)  # Отрисовка одного изображения для кнопки
             text_surface = self.font.render(self.menu_items[i], True, self.BLACK)
             text_rect = text_surface.get_rect(center=rect.center)
-            self.screen.blit(text_surface, text_rect)
+            self.screen.blit(text_surface, text_rect)  # Отрисовка текста на кнопке
         self.draw_particles()  # отрисовываем частицы
         pygame.display.flip()
 
@@ -127,6 +126,7 @@ class GameMenu:
                                     # КОД ПРОДОЛЖАЮЩИЙ ИГРУ
                             elif self.menu_items[i] == "Титры":
                                 show_titles(800, 600, text_sequence)
+                                    # вопрос, что вы хотите сделать в титрах?
                             elif self.menu_items[i] == "Достижение":
                                 print("Достижение")
                                     # pygame.mixer.Sound("звук монет.mp3").play()
@@ -136,13 +136,7 @@ class GameMenu:
                                     # код для трофеев
                             elif self.menu_items[i] == "Загрузить":
                                 print("Загрузить")
-                if event.type == pygame.MOUSEMOTION:
-                    mouse_pos = pygame.mouse.get_pos()
-                    for i, rect in enumerate(self.button_rects):
-                        if rect.collidepoint(mouse_pos):
-                            self.button_colors[i] = self.RED
-                        else:
-                            self.button_colors[i] = self.GRAY
+                                    # вопрос, что сюда будут загружать?
                 if event.type == pygame.MOUSEBUTTONDOWN and event.button == 3:
                     self.create_leaf_particle(event.pos[0], event.pos[1])
             self.update_particles()  # обновляем частицы
