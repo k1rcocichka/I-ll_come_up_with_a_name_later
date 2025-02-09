@@ -128,25 +128,26 @@ def indicator():
     lost_hp = pygame.draw.rect(screen, 'grey', (40, 388, 10, 190 - player.hp))
     lost_stamina = pygame.draw.rect(screen, 'grey', (53, 388, 10, 190 - player.stamina))
 
-    if player.have_wearon():
-            text = f"{player.inventory[player.inventory_cell].clip}/{player.inventory[player.inventory_cell].full_clip}"
+    if cells[player.inventory_cell].item is not None:
+        if type(cells[player.inventory_cell].item.item_type) == Wearon:
+                text = f"{cells[player.inventory_cell].item.item_type.clip}/{cells[player.inventory_cell].item.item_type.full_clip}"
+                text = font.render(text, True, (0, 0, 0))
+                screen.blit(text, (450, 520))
+
+        if type(cells[player.inventory_cell].item.item_type) == Medkit:
+            text = f"{cells[player.inventory_cell].item.item_type.use_medkit}"
             text = font.render(text, True, (0, 0, 0))
             screen.blit(text, (450, 520))
 
-    if type(player.inventory[player.inventory_cell]) == Medkit:
-        text = f"{player.inventory[player.inventory_cell].use_medkit}"
-        text = font.render(text, True, (0, 0, 0))
-        screen.blit(text, (450, 520))
+        if type(cells[player.inventory_cell].item.item_type) == ClipsWearon:
+            text = f"{cells[player.inventory_cell].item.item_type.use_clips}"
+            text = font.render(text, True, (0, 0, 0))
+            screen.blit(text, (450, 520))
 
-    if type(player.inventory[player.inventory_cell]) == ClipsWearon:
-        text = f"{player.inventory[player.inventory_cell].use_clips}"
-        text = font.render(text, True, (0, 0, 0))
-        screen.blit(text, (450, 520))
-
-    if type(player.inventory[player.inventory_cell]) == Knife:
-        text = f"1/1"
-        text = font.render(text, True, (0, 0, 0))
-        screen.blit(text, (450, 520))
+        if type(cells[player.inventory_cell].item.item_type) == Knife:
+            text = f"1/1"
+            text = font.render(text, True, (0, 0, 0))
+            screen.blit(text, (450, 520))
 
 #тут загрузка картинок
 def load_image(name, colorkey=None):
@@ -359,7 +360,6 @@ class Player():
         self.stamina = 190
         self.player_hit_clock = 0
         self.player_sprint_clock = 0
-        self.inventory = [None, None, None]
         self.death = False
 
         self.attack_range = 50  # Расстояние атаки
@@ -429,6 +429,10 @@ class Player():
 
         for light in level.lights:
             if self.rect.colliderect(light.rect):
+                self.rect.center = original_position
+
+        for npc in level.npcs:
+            if self.rect.colliderect(npc.rect):
                 self.rect.center = original_position
 
         if self.hp <= 0:
@@ -638,7 +642,7 @@ class Enemy(pygame.sprite.Sprite):
 
         for bullet in bullet_group:
             if self.rect.colliderect(bullet) and self.hp >= 0:
-                self.hp = self.hp - player.inventory[player.inventory_cell].damage
+                self.hp = self.hp - cells[player.inventory_cell].item.item_type.damage
                 # Создание частиц крови
                 for _ in range(20):  # Создаем 20 частиц
                     blood_particles.add(BloodParticle(image="blood.png", position=self.rect.center))
@@ -1015,27 +1019,11 @@ blood_particles = pygame.sprite.Group()
 #экземпляры класса
 player = Player(image="player.png", position=(400, 400))
 
-
 camera = Camera()
 alpha_ = TimeOfDay()
 
 inventory_image = pygame.image.load('./data/inventory.png', )
 inventor_image = pygame.transform.scale(inventory_image, (inventory_width, inventory_height))
-
-
-armor_image = load_image("shotgun.png")
-weapon_image = load_image("assault.png")
-
-armor_image = pygame.transform.scale(armor_image, (36, 36))
-weapon_image = pygame.transform.scale(weapon_image, (36, 36))
-
-# Создание предметов
-armor_item = Item(cells[0].rect.x, cells[0].rect.y,'armor', armor_image)
-weapon_item = Item(cells[1].rect.x, cells[1].rect.y,'weapon', weapon_image)
-
-# Помещение предметов в ячейки
-cells[0].item = armor_item
-cells[1].item = weapon_item
 
 programIcon = load_image('icon.png')
 pygame.display.set_icon(programIcon)
@@ -1069,7 +1057,6 @@ def main_loop(running):
                     # Взаимодействие с NPC
                     if current_npc:
                         current_npc.next_dialogue()
-                        print("E")
                     else:
                         for npc in level.npcs:
                             if npc.rect.colliderect(player.rect):
@@ -1216,35 +1203,42 @@ def main_loop(running):
 
 
 def handle_mouse_button_up(event):
-    if player.have_wearon() and type(player.inventory[player.inventory_cell]) == Wearon:
-        if player.inventory[player.inventory_cell].full_clip > 0:
-            player.inventory[player.inventory_cell].full_clip -= 1
+    if cells[player.inventory_cell].item == None:
+        pass
+    elif type(cells[player.inventory_cell].item.item_type) == Wearon:
+        if cells[player.inventory_cell].item.item_type.full_clip > 0:
+            cells[player.inventory_cell].item.item_type.full_clip -= 1
             bullet = Bullet(player.rect.center, player.angle)
             bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
             bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
             bullet_group.add(bullet)
 
-    if type(player.inventory[player.inventory_cell]) == Medkit and player.inventory[player.inventory_cell].use_medkit > 0:
-        player.inventory[player.inventory_cell].use_medkit -= 1
+    elif type(cells[player.inventory_cell].item.item_type) == Medkit and cells[player.inventory_cell].item.item_type.use_medkit > 0:
+        cells[player.inventory_cell].item.item_type.use_medkit -= 1
         player.hp += 50
 
-    if type(player.inventory[player.inventory_cell]) == ClipsWearon and player.inventory[player.inventory_cell].use_clips > 0:
-        for obj in player.inventory:
-            if type(obj) == Wearon:
-                obj.full_clip += player.inventory[player.inventory_cell].clips_many
-        player.inventory[player.inventory_cell].use_clips -= 1
+    elif type(cells[player.inventory_cell].item.item_type) == ClipsWearon and cells[player.inventory_cell].item.item_type.use_clips > 0:
+        for obj in cells:
+            if obj.item is not None:
+                if type(obj.item.item_type) == Wearon:
+                    obj.item.item_type.full_clip += cells[player.inventory_cell].item.item_type.clips_many
+        cells[player.inventory_cell].item.item_type.use_clips -= 1
+
 
 def handle_interaction():
     for obj in level.objects:
         if obj.use_me and type(obj) != Fumo:
             obj.kill()
-            for j in player.inventory:
-                if j is None:
-                    player.inventory[player.inventory.index(None)] = obj
+            for n, cell in enumerate(cells):
+                if cell.item is None:
+                    item_sprite = pygame.transform.scale(obj.sprite, (36, 36))
+                    item_ = Item(cells[n].rect.x, cells[n].rect.y, obj, item_sprite)
+                    cells[n].item = item_
                     break
         if obj.use_me and type(obj) == Fumo:
             obj.save()
             obj.kill()
             obj.sound.play()
+
 
 main_loop(True)
