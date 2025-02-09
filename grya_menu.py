@@ -20,7 +20,7 @@ class GameMenu:
         pygame.display.set_caption(title)
 
         self.font = pygame.font.Font(None, 36)
-        self.background_image = pygame.image.load("data/меню игры.jpg").convert()  # Convert to improve performance
+        self.background_image = pygame.image.load("data/меню игры.jpg").convert()  
         self.background_image = pygame.transform.scale(self.background_image, (width, height))
 
         self.menu_items = ["Начать", "Продолжить", "Титры", "Достижение", "Трофеи", "Загрузить", "Настройки", "Выход"]
