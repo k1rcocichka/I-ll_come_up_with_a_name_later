@@ -127,7 +127,6 @@ class GameMenu:
                                     # КОД ПРОДОЛЖАЮЩИЙ ИГРУ
                             elif self.menu_items[i] == "Титры":
                                 show_titles(800, 600, text_sequence)
-                                    # вопрос, что вы хотите сделать в титрах?
                             elif self.menu_items[i] == "Достижение":
                                 print("Достижение")
                                     # pygame.mixer.Sound("звук монет.mp3").play()
@@ -137,7 +136,6 @@ class GameMenu:
                                     # код для трофеев
                             elif self.menu_items[i] == "Загрузить":
                                 print("Загрузить")
-                                    # вопрос, что сюда будут загружать?
                 if event.type == pygame.MOUSEMOTION:
                     mouse_pos = pygame.mouse.get_pos()
                     for i, rect in enumerate(self.button_rects):
