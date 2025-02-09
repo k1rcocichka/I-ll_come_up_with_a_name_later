@@ -366,6 +366,7 @@ class Player():
         self.attack_damage = 30
         self.detection_radius = 100
         self.player_melle_tick = 0
+        self.original_position = None
 
         self.timer = 0 # обнуляем начальное значение для отсчета
         pygame.time.set_timer(pygame.USEREVENT, 1000) # запускаем таймер (в милисекундах) на срабатывание каждую секунд
@@ -388,7 +389,7 @@ class Player():
 
     """движения"""
     def move(self):
-        original_position = self.rect.center
+        self.original_position = self.rect.center
         key = pygame.key.get_pressed()
         if key[pygame.K_w]:
             self.rect.y -= self.speed_y
@@ -417,23 +418,19 @@ class Player():
 
         for box in level.boxes:
             if self.rect.colliderect(box.rect) and box.hp > 0:
-                self.rect.center = original_position
+                self.rect.center = self.original_position
 
         for barrier in level.barriers:
             if self.rect.colliderect(barrier.rect):
-                self.rect.center = original_position
+                self.rect.center = self.original_position
 
         for enemy in level.enemies:
             if player.rect.colliderect(enemy) and enemy.hp > 0:
-                self.rect.center = original_position
+                self.rect.center = self.original_position
 
         for light in level.lights:
             if self.rect.colliderect(light.rect):
-                self.rect.center = original_position
-
-        for npc in level.npcs:
-            if self.rect.colliderect(npc.rect):
-                self.rect.center = original_position
+                self.rect.center = self.original_position
 
         if self.hp <= 0:
             self.death = True
@@ -1060,6 +1057,7 @@ def main_loop(running):
                     else:
                         for npc in level.npcs:
                             if npc.rect.colliderect(player.rect):
+                                player.rect.center = player.original_position
                                 current_npc = npc
                                 current_npc.interact()
                                 break    
@@ -1205,24 +1203,26 @@ def main_loop(running):
 def handle_mouse_button_up(event):
     if cells[player.inventory_cell].item == None:
         pass
-    elif type(cells[player.inventory_cell].item.item_type) == Wearon:
-        if cells[player.inventory_cell].item.item_type.full_clip > 0:
-            cells[player.inventory_cell].item.item_type.full_clip -= 1
-            bullet = Bullet(player.rect.center, player.angle)
-            bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
-            bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
-            bullet_group.add(bullet)
+    else:
+        if type(cells[player.inventory_cell].item.item_type) == Wearon:
+            if cells[player.inventory_cell].item.item_type.full_clip > 0:
+                cells[player.inventory_cell].item.item_type.full_clip -= 1
+                bullet = Bullet(player.rect.center, player.angle)
+                bullet.speed_x = int(BULLET_SPEED * math.cos(math.radians(player.angle)))
+                bullet.speed_y = -int(BULLET_SPEED * math.sin(math.radians(player.angle)))
+                bullet_group.add(bullet)
 
-    elif type(cells[player.inventory_cell].item.item_type) == Medkit and cells[player.inventory_cell].item.item_type.use_medkit > 0:
-        cells[player.inventory_cell].item.item_type.use_medkit -= 1
-        player.hp += 50
+        elif type(cells[player.inventory_cell].item.item_type) == Medkit and cells[player.inventory_cell].item.item_type.use_medkit > 0:
+            cells[player.inventory_cell].item.item_type.use_medkit -= 1
+            player.hp += 50
 
-    elif type(cells[player.inventory_cell].item.item_type) == ClipsWearon and cells[player.inventory_cell].item.item_type.use_clips > 0:
-        for obj in cells:
-            if obj.item is not None:
-                if type(obj.item.item_type) == Wearon:
-                    obj.item.item_type.full_clip += cells[player.inventory_cell].item.item_type.clips_many
-        cells[player.inventory_cell].item.item_type.use_clips -= 1
+        elif type(cells[player.inventory_cell].item.item_type) == ClipsWearon and cells[player.inventory_cell].item.item_type.use_clips > 0:
+            for obj in cells:
+                if obj.item is not None:
+                    if type(obj.item.item_type) == Wearon:
+                        obj.item.item_type.full_clip += cells[player.inventory_cell].item.item_type.clips_many
+            cells[player.inventory_cell].item.item_type.use_clips -= 1
+        print(inventory_open)
 
 
 def handle_interaction():
